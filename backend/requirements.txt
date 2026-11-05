@@ -1,0 +1,26 @@
+# Django
+Django==4.2.7
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+djangorestframework-simplejwt==5.3.2
+
+# Database
+psycopg2-binary==2.9.9
+
+# Image processing
+Pillow==10.1.0
+
+# PDF generation
+reportlab==4.0.7
+
+# Excel export
+openpyxl==3.11.0
+
+# WSGI server
+gunicorn==21.2.0
+
+# Environment variables
+python-decouple==3.8
+
+# Development
+python-dotenv==1.0.0
