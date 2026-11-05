@@ -25,11 +25,11 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'corsheaders',
+    'django_filters',
     
     # Local apps
-    # 'apps.authentication',
-    # 'apps.categories',
-    # 'apps.products',
+    'apps.categories',
+    'apps.products',
     # 'apps.orders',
     # 'apps.reports',
 ]

@@ -22,10 +22,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('rest_framework.urls')),
-    # API endpoints will be added here
-    # path('api/v1/auth/', include('apps.authentication.urls')),
-    # path('api/v1/categories/', include('apps.categories.urls')),
-    # path('api/v1/products/', include('apps.products.urls')),
+    # API endpoints
+    path('api/v1/categories/', include('apps.categories.urls')),
+    path('api/v1/products/', include('apps.products.urls')),
     # path('api/v1/orders/', include('apps.orders.urls')),
     # path('api/v1/reports/', include('apps.reports.urls')),
 ]
