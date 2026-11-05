@@ -187,45 +187,54 @@ git push origin feature/nueva-funcionalidad
 
 ## 📅 Plan de Implementación
 
-### Fase 1: Fundaciones (Semana 1)
-- [ ] Estructura Docker
-- [ ] Configuración Django
-- [ ] Modelos de BD
-- [ ] Autenticación JWT
+### ✅ Fase 1: Fundaciones (COMPLETADA)
+- ✅ Estructura Docker (PostgreSQL, Django, React)
+- ✅ Configuración Django 4.2 + DRF
+- ✅ Modelos de BD base
+- ✅ Autenticación JWT
+- ✅ CORS y WSGI configurados
 
-### Fase 2: Catálogo (Semana 2)
-- [ ] Endpoints de productos
-- [ ] Catálogo público
-- [ ] Búsqueda y filtros
+**Documentación:** [FASE_1_COMPLETADA.md](FASE_1_COMPLETADA.md)
 
-### Fase 3: Carrito y Pedidos (Semana 2-3)
-- [ ] Carrito con localStorage
-- [ ] Checkout
-- [ ] Creación de pedidos
+### ✅ Fase 2: Catálogo (COMPLETADA)
+- ✅ Modelo Category con endpoints CRUD
+- ✅ Modelo Product con endpoints CRUD
+- ✅ Búsqueda avanzada por texto, categoría, precio
+- ✅ Compresión automática de imágenes (800x600px)
+- ✅ Admin Django integrado
+- ✅ Tests unitarios
 
-### Fase 4: PDF y WhatsApp (Semana 3)
-- [ ] Generador de PDF
-- [ ] Enlaces de WhatsApp
+**Documentación:** [FASE_2_CATALOGO.md](FASE_2_CATALOGO.md)
+
+### ⏳ Fase 3: Carrito y Pedidos
+- [ ] Modelo Cart + CartItem
+- [ ] API endpoints de carrito
+- [ ] Cálculo de totales con descuentos
+
+### ⏳ Fase 4: PDF y WhatsApp
+- [ ] Generador de PDF (reportlab)
+- [ ] Integración WhatsApp
 - [ ] Confirmación de pedido
 
-### Fase 5: Panel Admin (Semana 4)
+### ⏳ Fase 5: Panel Admin
 - [ ] Dashboard
 - [ ] Gestión de productos
 - [ ] Gestión de pedidos
 
-### Fase 6: Reportes (Semana 5)
+### ⏳ Fase 6: Reportes
 - [ ] Exportación XLSX
 - [ ] Filtros y búsqueda
 
-### Fase 7: PWA (Semana 5)
+### ⏳ Fase 7: PWA
 - [ ] Web App Manifest
 - [ ] Service Worker
 - [ ] Instalación en móvil
 
-### Fase 8: Testing (Semana 6)
+### ⏳ Fase 8: Testing y Deploy
 - [ ] Tests backend
 - [ ] Tests frontend
 - [ ] Tests E2E
+- [ ] Deploy a Railway
 
 ## 🔐 Seguridad
 
@@ -265,6 +274,6 @@ Privado - Popé
 
 ---
 
-**Estado:** En desarrollo (Fase 1 en progreso)  
+**Estado:** En desarrollo (Fase 2 completada, Fase 3 próxima)  
 **Última actualización:** 5 de noviembre de 2026  
-**Versión:** 0.1.0 - Especificaciones Completadas
+**Versión:** 0.2.0 - Backend de Catálogo Completado

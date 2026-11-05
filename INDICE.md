@@ -6,15 +6,114 @@
 tienda/
 ├── PROJECT_SPEC.md                    # Especificación original del proyecto
 ├── INDICE.md                          # Este archivo
+├── README.md                          # Información general
+├── FASE_1_COMPLETADA.md               # Documentación Fase 1 (Docker, Django, React)
+├── FASE_2_CATALOGO.md                 # Documentación Fase 2 (Categorías, Productos)
 ├── logo_pope.jpg                      # Logo corporativo (extraído del original)
 │
-└── docs/                              # Documentación técnica completa
-    ├── README.md                      # Índice de documentos
-    ├── 01-REQUIREMENTS.md             # Requerimientos funcionales
-    ├── 02-DESIGN.md                   # Diseño UI/UX
-    ├── 03-TASKS.md                    # 48 tareas de implementación
-    └── 04-HOSTING_Y_RESUMEN.md        # Hosting y resumen ejecutivo
+├── docs/                              # Documentación técnica completa
+│   ├── README.md                      # Índice de documentos
+│   ├── 01-REQUIREMENTS.md             # Requerimientos funcionales
+│   ├── 02-DESIGN.md                   # Diseño UI/UX
+│   ├── 03-TASKS.md                    # 48 tareas de implementación
+│   └── 04-HOSTING_Y_RESUMEN.md        # Hosting y resumen ejecutivo
+│
+├── backend/                           # Backend Django
+│   ├── config/                        # Configuración Django
+│   │   ├── settings.py                # ✨ Fase 2: + apps registradas
+│   │   ├── urls.py                    # ✨ Fase 2: + rutas v1
+│   │   └── wsgi.py
+│   ├── apps/
+│   │   ├── categories/                # ✨ NUEVA - Fase 2
+│   │   │   ├── models.py
+│   │   │   ├── views.py
+│   │   │   ├── serializers.py
+│   │   │   ├── urls.py
+│   │   │   ├── admin.py
+│   │   │   └── ...
+│   │   └── products/                  # ✨ NUEVA - Fase 2
+│   │       ├── models.py
+│   │       ├── views.py
+│   │       ├── serializers.py
+│   │       ├── urls.py
+│   │       ├── admin.py
+│   │       └── ...
+│   ├── manage.py
+│   ├── Dockerfile
+│   └── requirements.txt               # ✨ Fase 2: + django-filter
+│
+├── frontend/                          # Frontend React
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   └── index.css
+│   ├── vite.config.ts
+│   ├── package.json
+│   ├── Dockerfile
+│   └── tailwind.config.js
+│
+├── docker-compose.yml                 # ✨ Fase 1
+├── .gitignore
+├── .dockerignore
+└── .env.example
 ```
+
+---
+
+## 📊 Estado de Implementación
+
+### ✅ Fase 1: Fundaciones - COMPLETADA
+**Rama:** `feature/phase-1-fundaciones` (merged to `develop`)
+
+- ✅ Docker Compose (PostgreSQL, Django, React)
+- ✅ Django 4.2 + DRF configuration
+- ✅ React 18 + Vite + TypeScript + Tailwind CSS
+- ✅ JWT authentication setup
+- ✅ CORS configured
+- ✅ Database models foundation
+
+**Documentación:** `FASE_1_COMPLETADA.md`
+
+---
+
+### ✅ Fase 2: Catálogo - COMPLETADA
+**Rama:** `feature/phase-2-catalogo`
+
+**Tarea 2.1 - Endpoints de Categorías:**
+- ✅ Modelo Category (con slug auto-generado)
+- ✅ ViewSet CRUD + toggle_active
+- ✅ Serializadores (completo + listado)
+- ✅ Admin Django integrado
+
+**Tarea 2.2 - Endpoints de Productos + Búsqueda:**
+- ✅ Modelo Product (con propiedades computadas)
+- ✅ ViewSet CRUD + búsqueda avanzada
+- ✅ Filtrado por categoría, precio, stock
+- ✅ Ordenamiento configurable
+- ✅ Paginación (20 items/página)
+- ✅ Serializadores (completo, listado, detalle)
+- ✅ Admin Django con previsualizaciones
+
+**Tarea 2.3 - Compresión de Imágenes:**
+- ✅ Redimensionamiento automático (800x600px max)
+- ✅ Compresión JPEG (quality 85%)
+- ✅ Thumbnail auto-generado
+- ✅ Manejo de errores
+
+**Documentación:** `FASE_2_CATALOGO.md`
+
+---
+
+### ⏳ Fase 3-8: En Planificación
+
+| Fase | Nombre | Estado | Tareas |
+|------|--------|--------|--------|
+| 3 | Carrito y Pedidos | ⏳ Pendiente | 3.1, 3.2, 3.3 |
+| 4 | PDF y WhatsApp | ⏳ Pendiente | 4.1, 4.2, 4.3 |
+| 5 | Admin Panel | ⏳ Pendiente | 5.1, 5.2, 5.3 |
+| 6 | Reportes (XLSX) | ⏳ Pendiente | 6.1, 6.2 |
+| 7 | PWA | ⏳ Pendiente | 7.1, 7.2 |
+| 8 | Testing y Deploy | ⏳ Pendiente | 8.1, 8.2, 8.3 |
 
 ---
 
