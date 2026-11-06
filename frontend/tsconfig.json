@@ -21,13 +21,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "compilerOptions": {
+
+    /* Path mapping */
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"]
     }
-  }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
