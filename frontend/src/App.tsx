@@ -5,7 +5,9 @@ import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import { AdminAuthProvider } from './context/AdminAuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -23,7 +25,11 @@ function App() {
 
           {/* Admin routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          {/* Admin pages will be added here as ProtectedRoute */}
+          <Route 
+            path="/admin/dashboard" 
+            element={<ProtectedRoute element={<AdminDashboard />} />} 
+          />
+          {/* More admin pages will be added here */}
         </Routes>
       </BrowserRouter>
     </AdminAuthProvider>
