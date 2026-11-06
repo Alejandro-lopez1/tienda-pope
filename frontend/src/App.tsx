@@ -9,6 +9,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminCustomersPage from './pages/admin/AdminCustomersPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -44,7 +46,14 @@ function App() {
             path="/admin/products" 
             element={<ProtectedRoute element={<AdminProductsPage />} />} 
           />
-          {/* More admin pages will be added here */}
+          <Route 
+            path="/admin/settings" 
+            element={<ProtectedRoute element={<AdminSettingsPage />} />} 
+          />
+          <Route 
+            path="/admin/reports" 
+            element={<ProtectedRoute element={<AdminReportsPage />} />} 
+          />
         </Routes>
       </BrowserRouter>
     </AdminAuthProvider>
