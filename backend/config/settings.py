@@ -131,80 +131,48 @@ USE_TZ = True
 STATIC_URL = '/staticfiles/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# WhiteNoise configuration for efficient static file handling
-# In production with R2, this will be handled by the R2 storage backend
-# For local/non-R2 deployments, use WhiteNoise
-if not os.environ.get('USE_R2_STORAGE', 'False') == 'True':
-    # Only use WhiteNoise for local/filesystem storage
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-
 # ===== MEDIA FILES & STORAGE =====
-# Development: Local filesystem storage
-# Production: Cloudflare R2 storage via boto3
+# Use R2 if explicitly enabled; otherwise use filesystem
+USE_R2 = os.environ.get("USE_R2_STORAGE", "False") == "True"
 
-if os.environ.get('USE_R2_STORAGE', 'False') == 'True':
-    # Production: Use Cloudflare R2 for media storage
-    # Add django-storages to INSTALLED_APPS if using R2
-    if 'storages' not in INSTALLED_APPS:
-        INSTALLED_APPS = list(INSTALLED_APPS) + ['storages']
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
+}
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+if USE_R2:
+    # R2_PUBLIC_HOST is REQUIRED when using R2
+    if "R2_PUBLIC_HOST" not in os.environ:
+        raise KeyError(
+            "R2_PUBLIC_HOST environment variable is required when USE_R2_STORAGE=True. "
+            "Set it to your R2 bucket's public hostname (without https://). "
+            "Example: cdn.example.com or pub-<hash>.r2.dev"
+        )
     
-    # Configure boto3 for Cloudflare R2
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
-    AWS_S3_REGION_NAME = 'auto'  # Cloudflare R2 uses 'auto'
-    AWS_S3_ENDPOINT_URL = f"https://{os.environ.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com"
-    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
-    
-    # Django 6.0+ uses STORAGES dict instead of DEFAULT_FILE_STORAGE
-    # Use custom domain if available, otherwise use public R2 URL
-    r2_custom_domain = os.environ.get('R2_CUSTOM_DOMAIN')
-    if r2_custom_domain:
-        # If custom domain exists, use it directly (must already include protocol)
-        AWS_S3_CUSTOM_DOMAIN = r2_custom_domain
-        r2_media_url = f"{r2_custom_domain}/"
-        r2_static_url = f"{r2_custom_domain}/staticfiles/"
-    else:
-        # Use public R2 URL: https://<bucket-name>.r2.dev or https://<account-id>.r2.cloudflarestorage.com
-        # For public bucket, use r2.dev domain which is publicly accessible
-        bucket_url = f"https://{AWS_STORAGE_BUCKET_NAME}.r2.dev"
-        r2_media_url = f"{bucket_url}/"
-        r2_static_url = f"{bucket_url}/staticfiles/"
-    
-    STORAGES = {
-        'default': {
-            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
-            'OPTIONS': {
-                'location': 'media',
-                'custom_domain': AWS_S3_CUSTOM_DOMAIN if r2_custom_domain else None,
-            }
+    R2_PUBLIC_HOST = os.environ["R2_PUBLIC_HOST"]
+    INSTALLED_APPS = list(INSTALLED_APPS) + ["storages"]
+    AWS_STORAGE_BUCKET_NAME = os.environ["R2_BUCKET_NAME"]
+    AWS_S3_ENDPOINT_URL = f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = "auto"
+    AWS_ACCESS_KEY_ID = os.environ["R2_ACCESS_KEY_ID"]
+    AWS_SECRET_ACCESS_KEY = os.environ["R2_SECRET_ACCESS_KEY"]
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "location": "media",
+            "querystring_auth": False,
+            "custom_domain": R2_PUBLIC_HOST,
         },
-        'staticfiles': {
-            'BACKEND': 'storages.backends.s3boto3.S3StaticStorage',
-            'OPTIONS': {
-                'location': 'staticfiles',
-                'custom_domain': AWS_S3_CUSTOM_DOMAIN if r2_custom_domain else None,
-            }
-        }
     }
-    
-    # Media and static file URLs
-    MEDIA_URL = r2_media_url
-    STATIC_URL = r2_static_url
-    
-else:
-    # Development: Local filesystem storage
-    STORAGES = {
-        'default': {
-            'BACKEND': 'django.core.files.storage.FileSystemStorage',
-        },
-        'staticfiles': {
-            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
-        }
-    }
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
-    STATIC_URL = '/staticfiles/'
+    MEDIA_URL = f"https://{R2_PUBLIC_HOST}/media/"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
