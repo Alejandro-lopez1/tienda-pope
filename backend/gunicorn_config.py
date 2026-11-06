@@ -3,16 +3,18 @@ Gunicorn configuration for production deployment on Render.
 This file is used when running: gunicorn -c gunicorn_config.py config.wsgi
 """
 
-import multiprocessing
 import os
 
 # Server socket
-bind = "0.0.0.0:8000"
+# Render sets $PORT environment variable; default to 8000 if not set
+port = os.environ.get("PORT", "8000")
+bind = f"0.0.0.0:{port}"
 backlog = 2048
 
 # Worker processes
-# Render gives 512MB RAM, so we use CPU count for workers
-workers = multiprocessing.cpu_count()
+# Render gives 512MB RAM, so we use 2 workers to avoid memory exhaustion
+# Each worker typically uses ~50-100MB
+workers = int(os.environ.get("GUNICORN_WORKERS", "2"))
 worker_class = "sync"
 worker_connections = 1000
 max_requests = 1000

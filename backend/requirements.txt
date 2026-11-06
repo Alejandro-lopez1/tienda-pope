@@ -9,7 +9,7 @@ django-filter==24.1
 psycopg2-binary==2.9.9
 
 # Image processing
-Pillow==10.1.0
+Pillow==11.0.0
 
 # PDF generation
 reportlab==4.0.7

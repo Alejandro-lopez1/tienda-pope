@@ -132,7 +132,12 @@ STATIC_URL = '/staticfiles/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # WhiteNoise configuration for efficient static file handling
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# In production with R2, this will be handled by the R2 storage backend
+# For local/non-R2 deployments, use WhiteNoise
+if not os.environ.get('USE_R2_STORAGE', 'False') == 'True':
+    # Only use WhiteNoise for local/filesystem storage
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # ===== MEDIA FILES & STORAGE =====
 # Development: Local filesystem storage
@@ -151,20 +156,55 @@ if os.environ.get('USE_R2_STORAGE', 'False') == 'True':
     AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
     
-    # Use S3 backend for R2 (R2 is S3-compatible)
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # Django 6.0+ uses STORAGES dict instead of DEFAULT_FILE_STORAGE
+    # Use custom domain if available, otherwise use public R2 URL
+    r2_custom_domain = os.environ.get('R2_CUSTOM_DOMAIN')
+    if r2_custom_domain:
+        # If custom domain exists, use it directly (must already include protocol)
+        AWS_S3_CUSTOM_DOMAIN = r2_custom_domain
+        r2_media_url = f"{r2_custom_domain}/"
+        r2_static_url = f"{r2_custom_domain}/staticfiles/"
+    else:
+        # Use public R2 URL: https://<bucket-name>.r2.dev or https://<account-id>.r2.cloudflarestorage.com
+        # For public bucket, use r2.dev domain which is publicly accessible
+        bucket_url = f"https://{AWS_STORAGE_BUCKET_NAME}.r2.dev"
+        r2_media_url = f"{bucket_url}/"
+        r2_static_url = f"{bucket_url}/staticfiles/"
     
-    # Custom domain for R2 (optional, for CDN)
-    if os.environ.get('R2_CUSTOM_DOMAIN'):
-        AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_CUSTOM_DOMAIN')
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {
+                'location': 'media',
+                'custom_domain': AWS_S3_CUSTOM_DOMAIN if r2_custom_domain else None,
+            }
+        },
+        'staticfiles': {
+            'BACKEND': 'storages.backends.s3boto3.S3StaticStorage',
+            'OPTIONS': {
+                'location': 'staticfiles',
+                'custom_domain': AWS_S3_CUSTOM_DOMAIN if r2_custom_domain else None,
+            }
+        }
+    }
     
-    # Media files public URL
-    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN or AWS_STORAGE_BUCKET_NAME}.r2.cloudflarestorage.com/"
-    MEDIA_ROOT = ''  # Not used with S3 backend
+    # Media and static file URLs
+    MEDIA_URL = r2_media_url
+    STATIC_URL = r2_static_url
+    
 else:
     # Development: Local filesystem storage
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        }
+    }
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
+    STATIC_URL = '/staticfiles/'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
