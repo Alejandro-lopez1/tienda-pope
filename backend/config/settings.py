@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'django_filters',
     
     # Local apps
+    'apps.auth',
     'apps.categories',
     'apps.products',
     'apps.orders',
