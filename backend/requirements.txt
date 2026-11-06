@@ -20,8 +20,18 @@ openpyxl==3.11.0
 # WSGI server
 gunicorn==21.2.0
 
+# Static files handling in production
+whitenoise==6.6.0
+
 # Environment variables
 python-decouple==3.8
+
+# Database URL parsing (for Neon PostgreSQL in production)
+dj-database-url==2.1.0
+
+# Storage: django-storages + boto3 for Cloudflare R2 in production
+django-storages==1.14.2
+boto3==1.28.85
 
 # Development
 python-dotenv==1.0.0

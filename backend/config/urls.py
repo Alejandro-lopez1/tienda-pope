@@ -18,8 +18,24 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+# Health check endpoint for monitoring
+@require_http_methods(["GET"])
+def health_check(request):
+    """Simple health check endpoint for monitoring and load balancers."""
+    return JsonResponse({
+        "status": "healthy",
+        "service": "Pope API",
+        "version": "0.8.0"
+    })
 
 urlpatterns = [
+    # Health check endpoint
+    path('health/', health_check, name='health_check'),
+    
+    # Admin and API
     path('admin/', admin.site.urls),
     path('api/v1/', include('rest_framework.urls')),
     # API endpoints
