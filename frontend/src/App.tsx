@@ -7,6 +7,7 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminCustomersPage from './pages/admin/AdminCustomersPage';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -33,6 +34,10 @@ function App() {
           <Route 
             path="/admin/orders" 
             element={<ProtectedRoute element={<AdminOrdersPage />} />} 
+          />
+          <Route 
+            path="/admin/customers" 
+            element={<ProtectedRoute element={<AdminCustomersPage />} />} 
           />
           {/* More admin pages will be added here */}
         </Routes>

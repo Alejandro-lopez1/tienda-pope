@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.categories',
     'apps.products',
     'apps.orders',
+    'apps.customers',
     # 'apps.reports',
 ]
 
