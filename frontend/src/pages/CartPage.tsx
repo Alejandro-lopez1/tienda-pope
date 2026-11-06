@@ -143,7 +143,7 @@ export const CartPage: React.FC = () => {
               className="block w-full mt-3 bg-green-500 text-white py-3 rounded-lg font-bold text-center hover:bg-green-600 transition-colors"
             >
               📱 Ordenar por WhatsApp
-            </Link>
+            </button>
           </div>
         </div>
       </div>
