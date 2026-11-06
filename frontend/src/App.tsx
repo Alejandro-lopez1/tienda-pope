@@ -8,6 +8,7 @@ import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminCustomersPage from './pages/admin/AdminCustomersPage';
+import AdminProductsPage from './pages/admin/AdminProductsPage';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -38,6 +39,10 @@ function App() {
           <Route 
             path="/admin/customers" 
             element={<ProtectedRoute element={<AdminCustomersPage />} />} 
+          />
+          <Route 
+            path="/admin/products" 
+            element={<ProtectedRoute element={<AdminProductsPage />} />} 
           />
           {/* More admin pages will be added here */}
         </Routes>
