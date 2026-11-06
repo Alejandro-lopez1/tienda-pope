@@ -31,13 +31,23 @@ Dashboard → R2 → Create bucket
   
 Settings → Public access
   Enable
-  Get: Account ID, API Token (Access Key ID, Secret Access Key)
+  
+R2 → Manage API tokens
+  Create API token (NOT in Public Access settings)
+  Copy: Access Key ID, Secret Access Key
+  
+Dashboard → Settings → Account
+  Get: Account ID
+  
+R2 bucket → Public access
   Get: Public URL (e.g., pub-abc123def.r2.dev)
 ```
 
 **If using custom domain:**
 ```
-- Point DNS CNAME to Cloudflare R2
+- Do NOT add DNS CNAME manually
+- Add in bucket Settings → Custom Domains
+- Domain must already be in Cloudflare DNS
 - This is R2_PUBLIC_HOST value (without https://)
 ```
 
@@ -66,25 +76,25 @@ neon.tech → Create project
 | Build Command | `pip install -r requirements.txt && python manage.py collectstatic --noinput` |
 | Start Command | `python manage.py migrate && gunicorn -c gunicorn_config.py config.wsgi` |
 
-**Environment Variables** (paste all):
+**Environment Variables** (replace placeholders with actual domains):
 
 ```
 PYTHON_VERSION=3.12.x
 DEBUG=False
 SECRET_KEY=<generate: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
 DATABASE_URL=<Neon connection string with ?sslmode=require>
-ALLOWED_HOSTS=pope-backend.onrender.com,api.pope.com.ar
-CORS_ALLOWED_ORIGINS=https://pope.pages.dev,https://pope.com.ar
-CSRF_TRUSTED_ORIGINS=https://pope.pages.dev,https://pope.com.ar
+ALLOWED_HOSTS=<actual-render-domain>.onrender.com,<your-api-domain.com>
+CORS_ALLOWED_ORIGINS=https://<actual-pages-domain>.pages.dev,https://<your-frontend-domain.com>
+CSRF_TRUSTED_ORIGINS=https://<actual-pages-domain>.pages.dev,https://<your-frontend-domain.com>
 USE_R2_STORAGE=True
 R2_ACCOUNT_ID=<from Cloudflare>
-R2_BUCKET_NAME=pope-media
+R2_BUCKET_NAME=<your-bucket-name>
 R2_ACCESS_KEY_ID=<from API token>
 R2_SECRET_ACCESS_KEY=<from API token>
-R2_PUBLIC_HOST=<pub-abc123.r2.dev or custom domain>
+R2_PUBLIC_HOST=<pub-abc123.r2.dev or your custom domain>
 ```
 
-**Note:** If R2_PUBLIC_HOST is missing and `USE_R2_STORAGE=True`, deployment fails at build step with clear error.
+**⚠️ CRITICAL:** If you use default names (`pope-backend.onrender.com`, etc.), check if they're taken. Render appends a suffix if needed. Update ALLOWED_HOSTS and CORS to match.
 
 ### 4. Cloudflare Pages Setup
 
@@ -102,34 +112,60 @@ R2_PUBLIC_HOST=<pub-abc123.r2.dev or custom domain>
 **Environment Variables:**
 
 ```
-VITE_API_URL=https://pope-backend.onrender.com/api/v1
+VITE_API_URL=https://<actual-render-domain>/api/v1
 ```
 
 **Custom Domain** (optional):
 ```
-- pope.com.ar → Cloudflare Pages
-- api.pope.com.ar → Render (via DNS CNAME or IP)
-- media.pope.com.ar → R2 (optional, if using custom domain for R2)
+- If using custom domain, add in Pages Settings
+- Domain must be in Cloudflare DNS (already connected)
+- Example: pope.com.ar → Cloudflare Pages
 ```
+
+**Note:** Pages assigns a default domain like `repo-name.pages.dev`. Update `VITE_API_URL` to point to the actual Render URL (not placeholder `pope-backend.onrender.com`).
 
 ---
 
 ## Deployment Order
 
-1. **Deploy Render** (backend)
-   - Build completes (checks Python 3.12, runs collectstatic)
-   - Migrations run
-   - Gunicorn starts on assigned port
-   - Health check: `curl https://<render-url>/api/v1/health` (if endpoint exists)
+### Prerequisites (before any deploy)
 
-2. **Deploy Cloudflare Pages** (frontend)
+1. **Create Neon database**
+   - Copy `DATABASE_URL` with `?sslmode=require`
+
+2. **Create R2 bucket**
+   - Enable public access (Settings → Public Access)
+   - Create S3 API token (R2 → Manage API tokens, NOT Public Access)
+   - Copy: Account ID, Access Key ID, Secret Access Key, Public URL
+
+3. **Note actual domain names**
+   - Render will assign: `<random>.onrender.com`
+   - Cloudflare Pages will assign: `<repo-name>.pages.dev`
+   - **Update ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS with real names**
+
+### Deployment Steps
+
+1. **Deploy Render backend first**
+   - Build completes (checks Python 3.12, runs collectstatic)
+   - Migrations run automatically
+   - Gunicorn starts on assigned port (reads $PORT env var)
+   - Verify: `curl https://<actual-render-url>/api/v1/categories/` → 200 OK (returns empty list)
+
+2. **Create superuser and load initial data (from your PC)**
+   ```bash
+   export DATABASE_URL="postgresql://user:pass@host.neon.tech/db?sslmode=require"
+   python backend/manage.py createsuperuser
+   # Optional: load initial categories, products, etc.
+   ```
+
+3. **Deploy Cloudflare Pages frontend**
    - Build completes (npm run build outputs dist/)
    - _redirects deployed (frontend/public/_redirects)
-   - Frontend accessible at https://pope.pages.dev
+   - Frontend accessible at assigned Pages domain
 
-3. **Verify Integration**
-   - Frontend can reach backend (CORS working)
-   - Admin at `/admin/` has styles (admin CSS served by WhiteNoise)
+4. **Verify Integration**
+   - Frontend can reach backend (CORS working: no browser errors)
+   - Admin at `/admin/` has styles (dark/light theme visible)
    - Image upload works (goes to R2 if enabled)
 
 ---
@@ -139,33 +175,34 @@ VITE_API_URL=https://pope-backend.onrender.com/api/v1
 ### Criterion 7: Images load, no expiration
 
 ```bash
-# 1. SSH into Render or use Django admin at /admin/
-# 2. Upload image to a product (e.g., photo.jpg)
-# 3. Open image URL in incognito: https://pub-<hash>.r2.dev/media/products/photo.jpg
-# 4. Verify: Loads successfully
-# 5. Wait 1+ hour
-# 6. Reload in incognito: Still loads (no X-Amz-Signature param in URL)
+# 1. Open admin at https://<actual-render-url>/admin/
+# 2. Log in with superuser created earlier
+# 3. Upload image to a product (e.g., photo.jpg)
+# 4. Open image URL in incognito: https://<R2_PUBLIC_HOST>/media/products/photo.jpg
+# 5. Verify: Loads successfully
+# 6. Wait 1+ hour
+# 7. Reload in incognito: Still loads (no X-Amz-Signature param in URL)
 ```
 
-**Expected:** Image loads both times, URL is stable with no query params.
+**Expected:** Image loads both times, URL is stable with no query params (proves no signed URLs with expiration).
 
 ### Criterion 8: Admin has styles
 
 ```bash
-# 1. Open https://pope-backend.onrender.com/admin/
-# 2. Check: Login form has CSS (styled, not plain HTML)
-# 3. Check: Reason is collectstatic ran and WhiteNoise compressed CSS
+# 1. Open https://<actual-render-url>/admin/
+# 2. Check: Login form has CSS (styled inputs, dark/light theme)
+# 3. Check: It's not plain HTML
 ```
 
-**Expected:** Styled login form with dark/light theme, input fields with borders.
+**Expected:** Styled login form with CSS, not bare HTML form.
 
 ### Criterion 9: Frontend routes don't 404
 
 ```bash
-# 1. Open https://pope.pages.dev/carrito (cart page)
+# 1. Open https://<actual-pages-url>/carrito (cart page)
 # 2. Hard refresh: Cmd/Ctrl + Shift + R
 # 3. Check: Page renders (not 404)
-# 4. Reason: _redirects redirects /carrito → /index.html → React Router
+# 4. Reason: _redirects redirects /carrito → /index.html → React Router takes over
 ```
 
 **Expected:** Cart page loads, not "404 - Page not found".
@@ -177,20 +214,25 @@ VITE_API_URL=https://pope-backend.onrender.com/api/v1
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Render build fails: `KeyError: R2_PUBLIC_HOST` | Env var missing | Add to Render dashboard |
-| Render build fails: `pip install` times out | Network issue | Check Neon DB connectivity |
+| Render build fails: `pip install` fails | Incompatible dependencies (e.g., Python 3.11 with Django 6) | Verify `PYTHON_VERSION=3.12.x` |
 | Admin CSS missing | collectstatic didn't run | Verify Build Command includes `collectstatic` |
-| Images 403 Forbidden | R2 public access disabled | Enable in Cloudflare R2 settings |
-| Images 404 | Wrong R2_PUBLIC_HOST | Verify hostname matches R2 public URL |
-| Frontend 404 on reload | _redirects not deployed | Verify `frontend/public/_redirects` exists |
-| CORS error | Origins not in CSRF_TRUSTED_ORIGINS | Update Render env var |
+| Backend returns 400 Bad Request | ALLOWED_HOSTS mismatch | Verify env var matches actual Render domain |
+| Frontend CORS error | CORS_ALLOWED_ORIGINS mismatch | Update env var to actual Pages domain |
+| Images 403 Forbidden | R2 public access disabled | Enable in Cloudflare R2 Settings → Public Access |
+| Images 404 | Wrong R2_PUBLIC_HOST | Verify hostname matches R2 public URL or custom domain |
+| Frontend 404 on reload | _redirects not deployed | Verify `frontend/public/_redirects` exists and deployed |
+| First request after idle is slow | Normal on Render free plan | Service "wakes up"; subsequent requests are fast |
 
 ---
 
-## Known Limitations
+## Known Limitations & Important Notes
 
-- **WhatsApp number in git history:** Old number appears in old commits, not in `.env.example` (now uses placeholder). No impact on production.
-- **Docker local with DEBUG=False:** Admin requires `collectstatic` step; `DEBUG=True` uses filesystem storage (easier for development).
-- **R2 requires public access:** `R2_PUBLIC_HOST` only works if bucket has public access enabled in Cloudflare.
+- **No Shell access on Render free plan:** You must create the superuser from your PC with `DATABASE_URL` pointing to Neon. See "Deployment Steps" above.
+- **WhatsApp number in git history:** Old number appears in old commits (not in `.env.example` anymore). If this is a concern, you can rewrite history, but it's already visible to anyone with repo access.
+- **Docker local with DEBUG=False:** Admin requires `python manage.py collectstatic` step first. For local development, use `DEBUG=True` (filesystem storage easier).
+- **R2 requires public access:** `R2_PUBLIC_HOST` only works if you've enabled public access in Cloudflare R2 Settings → Public Access, or connected a custom domain.
+- **Render domain names:** Render assigns domains like `<name>.onrender.com`. If your name is taken, it appends a suffix. Check the actual domain after creation and update `ALLOWED_HOSTS`.
+- **First request after idle:** On Render free plan, the first request after ~15 minutes of inactivity is slow (service "waking up"). This is normal, not a bug.
 
 ---
 
@@ -198,11 +240,20 @@ VITE_API_URL=https://pope-backend.onrender.com/api/v1
 
 If deployment fails after merge to master:
 
-```bash
-git revert -m 1 <merge-commit-hash>
-git push origin master
-# Render will auto-deploy from new master
+**Option 1 (Recommended - Render):**
 ```
+Render Dashboard → Deployments → Select previous working deploy → Redeploy
+```
+
+**Option 2 (Git revert - not recommended):**
+```bash
+# Only works if there was an actual merge commit
+# Fast-forward merges create linear history (no merge commit to revert)
+git log --oneline | grep -i "merge"
+# If no merge commit found, use Option 1 instead
+```
+
+**Note:** Reverting in git would leave you with old Django 4.2 + Python 3.11, which doesn't deploy. Use Render's redeploy feature instead.
 
 ---
 
