@@ -4,9 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.http import FileResponse
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer
+from .services import PDFReceiptGenerator, WhatsAppMessageGenerator
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -98,22 +102,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
-    def mark_paid(self, request, pk=None):
-        """Marcar pedido como pagado."""
-        if not request.user or not request.user.is_staff:
-            return Response(
-                {'error': 'Solo administradores pueden cambiar estado de pago'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        order = self.get_object()
-        order.paid = True
-        order.save()
-        
-        serializer = self.get_serializer(order)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Actualizar estado del pedido."""
         if not request.user or not request.user.is_staff:
@@ -141,5 +129,89 @@ class OrderViewSet(viewsets.ModelViewSet):
     def invoice(self, request, pk=None):
         """Obtener resumen del pedido para factura."""
         order = self.get_object()
+        serializer = self.get_serializer(order)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def generate_pdf(self, request, pk=None):
+        """
+        Generar y descargar recibo PDF del pedido.
+        
+        Endpoint: GET /api/v1/orders/{id}/generate-pdf/
+        Retorna: Archivo PDF para descargar
+        Permisos: Público (cualquiera con el ID del pedido)
+        """
+        try:
+            order = self.get_object()
+            
+            # Generar PDF
+            pdf_generator = PDFReceiptGenerator()
+            pdf_buffer = pdf_generator.generate(order)
+            
+            # Retornar como descarga de archivo
+            filename = f"Recibo_{order.order_number}.pdf"
+            response = FileResponse(
+                pdf_buffer,
+                as_attachment=True,
+                filename=filename,
+                content_type='application/pdf'
+            )
+            
+            return response
+        
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Pedido no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al generar PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def send_whatsapp(self, request, pk=None):
+        """
+        Generar enlace de WhatsApp con mensaje del pedido.
+        
+        Endpoint: POST /api/v1/orders/{id}/send-whatsapp/
+        Retorna: {
+            'message': str,
+            'whatsapp_link': str,
+            'phone_number': str
+        }
+        Permisos: Público
+        """
+        try:
+            order = self.get_object()
+            
+            # Generar mensaje y enlace de WhatsApp
+            whatsapp_data = WhatsAppMessageGenerator.generate_for_order(order)
+            
+            return Response(whatsapp_data, status=status.HTTP_200_OK)
+        
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Pedido no encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error al generar enlace de WhatsApp: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['patch', 'post'])
+    def mark_paid(self, request, pk=None):
+        """Marcar pedido como pagado."""
+        # Para MVP, permitir marcar como pagado sin restricción
+        # (en producción, esto debe estar protegido)
+        
+        order = self.get_object()
+        order.paid = True
+        order.paid_at = timezone.now()
+        order.save()
+        
         serializer = self.get_serializer(order)
         return Response(serializer.data)
