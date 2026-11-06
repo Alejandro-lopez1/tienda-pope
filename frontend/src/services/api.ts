@@ -160,3 +160,13 @@ class ApiService {
 
 export const apiService = new ApiService();
 export type { Category, Product, ProductListItem, PaginatedResponse, SearchParams };
+
+/**
+ * Formatea un número como moneda en pesos argentinos
+ */
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+  }).format(amount);
+}

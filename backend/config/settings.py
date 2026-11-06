@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     # Local apps
     'apps.categories',
     'apps.products',
-    # 'apps.orders',
+    'apps.orders',
     # 'apps.reports',
 ]
 
