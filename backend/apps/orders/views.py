@@ -1,4 +1,5 @@
-from django.db.models import Q
+import logging
+
 from django.http import FileResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -8,10 +9,13 @@ from rest_framework.exceptions import NotFound
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from .models import Order
 from .serializers import OrderCreateSerializer, OrderListSerializer, OrderSerializer
 from .services import PDFReceiptGenerator, WhatsAppMessageGenerator
+
+logger = logging.getLogger(__name__)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -50,20 +54,25 @@ class OrderViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAdminUser()]
 
+    def get_throttles(self):
+        if self.action == 'create':
+            self.throttle_scope = 'orders_create'
+            return [ScopedRateThrottle()]
+        if self.action in ['retrieve', 'generate_pdf', 'send_whatsapp']:
+            self.throttle_scope = 'orders_public'
+            return [ScopedRateThrottle()]
+        return super().get_throttles()
+
     def get_object(self):
-        """Permite lookup por pk numérico o por order_number (flujo de confirmación)."""
+        """Lookup: anónimos solo por order_number; staff puede usar pk numérico."""
         lookup = self.kwargs.get(self.lookup_field or 'pk')
-        qs = self.filter_queryset(self.get_queryset())
         if lookup is None:
             raise NotFound('Pedido no encontrado')
-        try:
-            obj = qs.get(pk=int(lookup))
-        except (ValueError, TypeError):
-            obj = qs.filter(order_number=str(lookup)).first()
-        except Order.DoesNotExist:
-            obj = None
-        if obj is None and not isinstance(lookup, int):
-            obj = qs.filter(order_number=str(lookup)).first()
+        qs = self.get_queryset()
+        is_staff = bool(getattr(self.request, 'user', None) and self.request.user.is_staff)
+        obj = qs.filter(order_number=str(lookup)).first()
+        if obj is None and is_staff and str(lookup).isdigit():
+            obj = qs.filter(pk=int(lookup)).first()
         if obj is None:
             raise NotFound('Pedido no encontrado')
         self.check_object_permissions(self.request, obj)
@@ -154,72 +163,41 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def generate_pdf(self, request, pk=None):
-        """
-        Generar y descargar recibo PDF del pedido.
-        
-        Endpoint: GET /api/v1/orders/{id}/generate-pdf/
-        Retorna: Archivo PDF para descargar
-        Permisos: Público (cualquiera con el ID del pedido)
-        """
+        """Generar y descargar recibo PDF del pedido (público, por order_number)."""
         try:
             order = self.get_object()
-            
-            # Generar PDF
             pdf_generator = PDFReceiptGenerator()
             pdf_buffer = pdf_generator.generate(order)
-            
-            # Retornar como descarga de archivo
             filename = f"Recibo_{order.order_number}.pdf"
-            response = FileResponse(
+            return FileResponse(
                 pdf_buffer,
                 as_attachment=True,
                 filename=filename,
-                content_type='application/pdf'
+                content_type='application/pdf',
             )
-            
-            return response
-        
-        except Order.DoesNotExist:
+        except NotFound:
+            raise
+        except Exception:
+            logger.exception("Error al generar PDF del pedido")
             return Response(
-                {'error': 'Pedido no encontrado'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {'error': f'Error al generar PDF: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'No se pudo generar el PDF. Intentá nuevamente.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=['post'])
     def send_whatsapp(self, request, pk=None):
-        """
-        Generar enlace de WhatsApp con mensaje del pedido.
-        
-        Endpoint: POST /api/v1/orders/{id}/send-whatsapp/
-        Retorna: {
-            'message': str,
-            'whatsapp_link': str,
-            'phone_number': str
-        }
-        Permisos: Público
-        """
+        """Generar enlace de WhatsApp con mensaje del pedido (público)."""
         try:
             order = self.get_object()
-            
-            # Generar mensaje y enlace de WhatsApp
             whatsapp_data = WhatsAppMessageGenerator.generate_for_order(order)
-            
             return Response(whatsapp_data, status=status.HTTP_200_OK)
-        
-        except Order.DoesNotExist:
+        except NotFound:
+            raise
+        except Exception:
+            logger.exception("Error al generar enlace de WhatsApp")
             return Response(
-                {'error': 'Pedido no encontrado'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {'error': f'Error al generar enlace de WhatsApp: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'No se pudo generar el enlace de WhatsApp. Intentá nuevamente.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=['patch', 'post'])

@@ -7,7 +7,9 @@
 - **Media:** en Render el disco es efímero; para imágenes hoy usar **R2** (`USE_R2_STORAGE=True` + vars `R2_*`).
 
 ## 1) Backend (Render)
-1. Crear servicio (conecta repo). Confirmar que ejecuta el start/Procfile correcto.
+1. Crear servicio (conecta repo). **Render no usa `Procfile`** automáticamente; usá `render.yaml` (Blueprint) o configurá en el panel:
+   - Build: `pip install -r backend/requirements.txt && cd backend && python manage.py collectstatic --noinput`
+   - Start: `cd backend && python manage.py migrate && gunicorn -c gunicorn_config.py config.wsgi`
 2. Env vars:
    - `DEBUG=False`
    - `SECRET_KEY=<largo-aleatorio>`
@@ -16,6 +18,7 @@
    - `CORS_ALLOWED_ORIGINS=https://<tu-sitio>.netlify.app`
    - `CSRF_TRUSTED_ORIGINS=https://<tu-sitio>.netlify.app`
    - `LOG_LEVEL=info`
+   - `NUM_PROXIES=1`
    - `SECURE_SSL_REDIRECT=True`
    - (imágenes) `USE_R2_STORAGE=True`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_HOST`
 3. Deploy y verificar `GET /health/`.
@@ -60,5 +63,6 @@ PY
 
 ## 6) Notas de seguridad
 - `DEBUG=False` en prod; `SECRET_KEY` fuerte; CORS/CSRF limitados al dominio Netlify.
-- Operaciones admin (listar/modificar pedidos, clientes/export) requieren staff. El flujo público post-compra (ver pedido, PDF, WhatsApp) permanece accesible para la confirmación.
-- Browsable API de DRF solo en `DEBUG`. `mark_paid` solo staff.
+- Operaciones admin (listar/modificar pedidos, clientes/export) requieren staff. El flujo público post-compra (ver pedido, PDF, WhatsApp por `order_number`) permanece accesible para la confirmación; **no** se resuelve por `pk` numérico para anónimos (anti-enumeración). `order_number` tiene alta entropía.
+- Throttling por scope en acciones públicas de pedidos (`orders_create`, `orders_public`), sin throttles globales anon/user. `NUM_PROXIES=1`.
+- Browsable API de DRF solo en `DEBUG`. Errores 500 devuelven mensaje genérico (sin filtrar excepciones).

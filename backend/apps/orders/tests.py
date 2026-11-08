@@ -1,9 +1,12 @@
-from django.test import TestCase
-from django.utils import timezone
 from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
+from rest_framework.test import APITestCase
 
 from apps.categories.models import Category
 from apps.products.models import Product
+
 from .models import Order, OrderItem
 
 
@@ -63,3 +66,44 @@ class OrderModelTest(TestCase):
         self.assertEqual(item.subtotal, Decimal('500.00'))
         self.assertEqual(item.discount_amount, Decimal('50.00'))
         self.assertEqual(item.total, Decimal('450.00'))
+
+
+class OrderLookupPermissionTests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Test')
+        self.product = Product.objects.create(
+            name='Prod',
+            sku='SKU-T-1',
+            category=self.category,
+            description='x',
+            price=Decimal('100.00'),
+            stock=10,
+        )
+        self.order = Order.objects.create(
+            customer_name='Ana',
+            customer_phone='3764000000',
+            customer_address='Dir 1',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+        )
+        User = get_user_model()
+        self.staff = User.objects.create_user(username='staff', password='pass12345', is_staff=True)
+
+    def test_anonymous_get_by_pk_returns_404(self):
+        res = self.client.get(f'/api/v1/orders/{self.order.pk}/')
+        self.assertEqual(res.status_code, 404)
+
+    def test_anonymous_get_by_order_number_returns_200(self):
+        res = self.client.get(f'/api/v1/orders/{self.order.order_number}/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get('order_number'), self.order.order_number)
+
+    def test_staff_get_by_pk_returns_200(self):
+        self.client.force_authenticate(user=self.staff)
+        res = self.client.get(f'/api/v1/orders/{self.order.pk}/')
+        self.assertEqual(res.status_code, 200)
+
+    def test_anonymous_list_returns_401_or_403(self):
+        res = self.client.get('/api/v1/orders/')
+        self.assertIn(res.status_code, (401, 403))

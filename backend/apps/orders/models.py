@@ -25,9 +25,9 @@ class Order(models.Model):
 
     # Información del pedido
     order_number = models.CharField(
-        max_length=20,
+        max_length=32,
         unique=True,
-        help_text="Número único del pedido (ej: ORD-20261105-001)"
+        help_text="Identificador único del pedido (alta entropía, usado en confirmación)"
     )
     status = models.CharField(
         max_length=20,
@@ -116,12 +116,11 @@ class Order(models.Model):
         return f"{self.order_number} - {self.customer_name}"
 
     def save(self, *args, **kwargs):
-        # Auto-generar número de pedido si es nuevo
+        # Auto-generar número de pedido si es nuevo (fallback; la API usa serializer+retry)
         if not self.order_number:
-            today = timezone.now().strftime('%Y%m%d')
-            count = Order.objects.filter(created_at__date=timezone.now().date()).count() + 1
-            self.order_number = f"ORD-{today}-{count:03d}"
-        
+            from .utils import generate_order_number
+
+            self.order_number = generate_order_number()
         super().save(*args, **kwargs)
 
     @property

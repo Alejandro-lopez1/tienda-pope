@@ -178,9 +178,14 @@ if USE_R2:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ===== REST FRAMEWORK CONFIGURATION =====
+NUM_PROXIES = int(os.environ.get('NUM_PROXIES', '1'))
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -188,6 +193,12 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # No global anon/user throttles; scopes applied on public order actions.
+    'DEFAULT_THROTTLE_RATES': {
+        'orders_create': '10/min',
+        'orders_public': '30/min',
+    },
+    'NUM_PROXIES': NUM_PROXIES,
 }
 
 # ===== JWT CONFIGURATION =====

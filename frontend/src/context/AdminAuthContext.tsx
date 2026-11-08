@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { apiFetch } from '../services/apiFetch';
 
 export interface AdminUser {
   id: number;
@@ -45,7 +46,6 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar token del localStorage al iniciar
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_access_token');
     const storedRefreshToken = localStorage.getItem('admin_refresh_token');
@@ -67,53 +67,35 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
     setLoading(false);
   }, []);
 
-  // Guardar token en localStorage cuando cambia
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('admin_access_token', token);
-    } else {
-      localStorage.removeItem('admin_access_token');
-    }
+    if (token) localStorage.setItem('admin_access_token', token);
+    else localStorage.removeItem('admin_access_token');
   }, [token]);
 
   useEffect(() => {
-    if (refreshToken) {
-      localStorage.setItem('admin_refresh_token', refreshToken);
-    } else {
-      localStorage.removeItem('admin_refresh_token');
-    }
+    if (refreshToken) localStorage.setItem('admin_refresh_token', refreshToken);
+    else localStorage.removeItem('admin_refresh_token');
   }, [refreshToken]);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('admin_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('admin_user');
-    }
+    if (user) localStorage.setItem('admin_user', JSON.stringify(user));
+    else localStorage.removeItem('admin_user');
   }, [user]);
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-
-      const response = await fetch('/api/v1/auth/login/', {
+      const response = await apiFetch('/auth/login/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email, // El backend acepta email o username
-          password,
-        }),
+        body: JSON.stringify({ username: email, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Credenciales inválidas');
+        const error = await response.json().catch(() => ({}));
+        throw new Error((error as any).detail || 'Credenciales inválidas');
       }
 
       const data = await response.json();
-
       setToken(data.access);
       setRefreshToken(data.refresh);
       setUser(data.user);
@@ -141,14 +123,9 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
     }
 
     try {
-      const response = await fetch('/api/v1/auth/refresh/', {
+      const response = await apiFetch('/auth/refresh/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          refresh: refreshToken,
-        }),
+        body: JSON.stringify({ refresh: refreshToken }),
       });
 
       if (!response.ok) {
@@ -175,9 +152,5 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
     refreshAccessToken,
   };
 
-  return (
-    <AdminAuthContext.Provider value={value}>
-      {children}
-    </AdminAuthContext.Provider>
-  );
+  return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 };

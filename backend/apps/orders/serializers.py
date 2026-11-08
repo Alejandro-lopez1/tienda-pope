@@ -124,6 +124,7 @@ class OrderCreateSerializer(serializers.Serializer):
         resolved = []
         errors = []
 
+        max_qty = 99
         for idx, item_data in enumerate(items_data):
             product_id = item_data.get('id')
             try:
@@ -131,16 +132,19 @@ class OrderCreateSerializer(serializers.Serializer):
             except (TypeError, ValueError):
                 errors.append(f"Ítem {idx}: cantidad inválida.")
                 continue
-            if quantity < 1:
-                errors.append(f"Ítem {idx}: la cantidad debe ser >= 1.")
+            if quantity < 1 or quantity > max_qty:
+                errors.append(f"Ítem {idx}: la cantidad debe estar entre 1 y {max_qty}.")
                 continue
             if product_id is None:
                 errors.append(f"Ítem {idx}: falta id de producto.")
                 continue
             try:
-                product = Product.objects.get(id=product_id)
+                product = Product.objects.get(id=product_id, is_active=True)
             except Product.DoesNotExist:
-                errors.append(f"Ítem {idx}: producto {product_id} no existe.")
+                errors.append(f"Ítem {idx}: producto {product_id} no disponible.")
+                continue
+            if hasattr(product, 'stock') and product.stock < quantity:
+                errors.append(f"Ítem {idx}: stock insuficiente para {getattr(product, 'name', product_id)}.")
                 continue
             resolved.append((product, quantity))
 

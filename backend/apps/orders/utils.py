@@ -22,12 +22,12 @@ def normalize_phone(phone: str | None) -> str:
 
 
 def generate_order_number() -> str:
-    """Generate a candidate order number.
+    """Generate a candidate order number with sufficient entropy.
 
     Uniqueness is enforced by the DB; callers creating under concurrency should
     retry on IntegrityError.
     """
     today = timezone.localdate().strftime("%Y%m%d")
-    suffix = secrets.token_hex(2).upper()  # 4 chars, adds entropy under races
+    suffix = secrets.token_hex(8).upper()  # 16 chars
     return f"ORD-{today}-{suffix}"
 
