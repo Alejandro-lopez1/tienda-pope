@@ -204,14 +204,17 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch', 'post'])
     def mark_paid(self, request, pk=None):
-        """Marcar pedido como pagado."""
-        # Para MVP, permitir marcar como pagado sin restricción
-        # (en producción, esto debe estar protegido)
-        
+        """Marcar pedido como pagado (solo admin)."""
+        if not request.user or not request.user.is_staff:
+            return Response(
+                {'error': 'Solo administradores pueden marcar pedidos como pagados'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         order = self.get_object()
         order.paid = True
         order.paid_at = timezone.now()
         order.save()
-        
+
         serializer = self.get_serializer(order)
         return Response(serializer.data)
