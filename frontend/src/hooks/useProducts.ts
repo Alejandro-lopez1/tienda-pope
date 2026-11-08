@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiService, Product, ProductListItem, PaginatedResponse, SearchParams } from '../services/api';
+import { useState, useEffect } from 'react';
+import { apiService, Product, ProductListItem, SearchParams } from '../services/api';
 
 interface UseProductsResult {
   products: ProductListItem[];
@@ -16,7 +16,7 @@ export function useProducts(initialPage: number = 1): UseProductsResult {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [currentPage] = useState(initialPage);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrevious, setHasPrevious] = useState(false);
 
@@ -83,7 +83,7 @@ export function useProductSearch(params: SearchParams): UseProductSearchResult {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(params.page || 1);
+  const [currentPage] = useState(params.page || 1);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrevious, setHasPrevious] = useState(false);
 

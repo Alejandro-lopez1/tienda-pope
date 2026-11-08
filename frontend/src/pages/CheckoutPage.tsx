@@ -13,7 +13,6 @@ export const CheckoutPage: React.FC = () => {
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
-    customer_email: '',
     customer_address: '',
     payment_method: 'cash',
     notes: '',
@@ -47,8 +46,7 @@ export const CheckoutPage: React.FC = () => {
     setError(null);
 
     try {
-      // Crear pedido con apiService
-      const response = await apiService.api.post('/orders/', {
+      const response = await apiService.createOrder({
         ...formData,
         items: items.map((item) => ({
           id: item.id,
@@ -57,12 +55,8 @@ export const CheckoutPage: React.FC = () => {
       });
 
       setSuccess(true);
-      const orderNumber = response.data.order_number;
-      
-      // Limpiar carrito
+      const orderNumber = response.order_number;
       clearCart();
-
-      // Redirigir a confirmación después de 2 segundos
       setTimeout(() => {
         navigate(`/order-confirmation/${orderNumber}`);
       }, 2000);
@@ -95,7 +89,6 @@ export const CheckoutPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Formulario */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -106,7 +99,6 @@ export const CheckoutPage: React.FC = () => {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Nombre */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Nombre Completo *
@@ -122,7 +114,6 @@ export const CheckoutPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Teléfono */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Teléfono *
@@ -139,56 +130,37 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email (Opcional)
-                    </label>
-                    <input
-                      type="email"
-                      name="customer_email"
-                      value={formData.customer_email}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
-                      placeholder="juan@example.com"
-                    />
-                  </div>
-
-                  {/* Método de Pago */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Método de Pago *
-                    </label>
-                    <select
-                      name="payment_method"
-                      value={formData.payment_method}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
-                    >
-                      <option value="cash">Efectivo</option>
-                      <option value="transfer">Transferencia</option>
-                      <option value="whatsapp">WhatsApp Pay</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Dirección */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Dirección de Entrega (Opcional)
+                    Dirección de Entrega *
                   </label>
                   <textarea
                     name="customer_address"
                     value={formData.customer_address}
                     onChange={handleChange}
+                    required
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
-                    placeholder="Calle, número, departamento..."
+                    placeholder="Calle, número, barrio, referencias..."
                   />
                 </div>
 
-                {/* Notas */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Método de Pago *
+                  </label>
+                  <select
+                    name="payment_method"
+                    value={formData.payment_method}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                  >
+                    <option value="cash">Efectivo</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="whatsapp">WhatsApp Pay</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Notas (Opcional)
@@ -218,7 +190,6 @@ export const CheckoutPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Resumen */}
           <div className="bg-white rounded-lg shadow-md p-6 h-fit">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Resumen de Pedido</h2>
 

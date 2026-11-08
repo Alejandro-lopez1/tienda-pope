@@ -82,18 +82,29 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 class OrderCreateSerializer(serializers.Serializer):
     """Serializador para crear pedidos desde el carrito."""
+
     customer_name = serializers.CharField(max_length=150)
     customer_phone = serializers.CharField(max_length=20)
-    customer_email = serializers.EmailField(required=False, allow_blank=True)
-    customer_address = serializers.CharField(required=False, allow_blank=True)
-    payment_method = serializers.ChoiceField(choices=[('cash', 'Efectivo'), ('transfer', 'Transferencia'), ('whatsapp', 'WhatsApp Pay')])
+    customer_email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    customer_address = serializers.CharField(max_length=500)
+    payment_method = serializers.ChoiceField(
+        choices=[('cash', 'Efectivo'), ('transfer', 'Transferencia'), ('whatsapp', 'WhatsApp Pay')]
+    )
     notes = serializers.CharField(required=False, allow_blank=True)
-    
+
     # Carrito
     items = serializers.ListField(
         child=serializers.DictField(),
-        help_text="Array de ítems del carrito"
+        help_text="Array de ítems del carrito",
     )
+
+    def validate_customer_phone(self, value):
+        from .utils import normalize_phone
+
+        normalized = normalize_phone(value)
+        if not normalized:
+            raise serializers.ValidationError("El teléfono es inválido.")
+        return normalized
 
     def validate_items(self, value):
         """Validar que items no esté vacío."""
@@ -104,45 +115,45 @@ class OrderCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         """Crear pedido con ítems."""
         items_data = validated_data.pop('items')
-        
+
         # Calcular totales
         subtotal = 0
         order_items = []
-        
+
         for item_data in items_data:
             product_id = item_data.get('id')
             quantity = item_data.get('quantity', 1)
-            
+
             try:
                 from apps.products.models import Product
                 product = Product.objects.get(id=product_id)
-                
+
                 # Usar precio con descuento si existe
                 price = product.discounted_price if product.discount_percentage > 0 else product.price
                 item_total = price * quantity
                 subtotal += item_total
-                
+
                 order_items.append({
                     'product': product,
                     'quantity': quantity,
                     'price': price,
                     'discount_percentage': product.discount_percentage,
                 })
-            except:
+            except Exception:
                 continue
-        
+
         # Crear pedido
         order = Order.objects.create(
             customer_name=validated_data['customer_name'],
             customer_phone=validated_data['customer_phone'],
-            customer_email=validated_data.get('customer_email', ''),
-            customer_address=validated_data.get('customer_address', ''),
+            customer_email=validated_data.get('customer_email') or '',
+            customer_address=validated_data.get('customer_address') or '',
             payment_method=validated_data['payment_method'],
             notes=validated_data.get('notes', ''),
             subtotal=subtotal,
             total=subtotal,
         )
-        
+
         # Crear ítems del pedido
         for item_data in order_items:
             OrderItem.objects.create(
@@ -152,5 +163,5 @@ class OrderCreateSerializer(serializers.Serializer):
                 price=item_data['price'],
                 discount_percentage=item_data['discount_percentage'],
             )
-        
+
         return order

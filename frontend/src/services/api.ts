@@ -27,6 +27,7 @@ interface Product {
   in_stock: boolean;
   is_featured: boolean;
   rating: number;
+  rating_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -88,8 +89,9 @@ class ApiService {
   // ===== Categories =====
 
   async getCategories(): Promise<Category[]> {
-    const response = await this.api.get<Category[]>('/categories/');
-    return response.data;
+    const response = await this.api.get<Category[] | PaginatedResponse<Category>>('/categories/');
+    const data = response.data;
+    return Array.isArray(data) ? data : data.results;
   }
 
   async getCategory(id: number): Promise<Category> {
@@ -123,8 +125,9 @@ class ApiService {
   }
 
   async getFeaturedProducts(): Promise<Product[]> {
-    const response = await this.api.get<Product[]>('/products/featured/');
-    return response.data;
+    const response = await this.api.get<Product[] | PaginatedResponse<Product>>('/products/featured/');
+    const data = response.data;
+    return Array.isArray(data) ? data : data.results;
   }
 
   async searchProducts(params: SearchParams): Promise<PaginatedResponse<ProductListItem>> {
@@ -156,6 +159,11 @@ class ApiService {
     );
     return response.data;
   }
+
+  async createOrder(payload: Record<string, unknown>): Promise<{ order_number: string }> {
+    const response = await this.api.post<{ order_number: string }>('/orders/', payload);
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();
@@ -164,9 +172,10 @@ export type { Category, Product, ProductListItem, PaginatedResponse, SearchParam
 /**
  * Formatea un número como moneda en pesos argentinos
  */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | string): string {
+  const value = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
-  }).format(amount);
+  }).format(Number.isFinite(value) ? value : 0);
 }

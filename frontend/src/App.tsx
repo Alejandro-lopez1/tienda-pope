@@ -13,6 +13,7 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { StorefrontLayout } from './components/StorefrontLayout';
 import './App.css';
 
 function App() {
@@ -21,38 +22,40 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Customer routes */}
-          <Route path="/" element={<CatalogPage />} />
-          <Route path="/catalogo" element={<CatalogPage />} />
-          <Route path="/producto/:slug" element={<ProductDetailPage />} />
-          <Route path="/carrito" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+          <Route element={<StorefrontLayout />}>
+            <Route path="/" element={<CatalogPage />} />
+            <Route path="/catalogo" element={<CatalogPage />} />
+            <Route path="/producto/:slug" element={<ProductDetailPage />} />
+            <Route path="/carrito" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+          </Route>
 
           {/* Admin routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route 
-            path="/admin/dashboard" 
-            element={<ProtectedRoute element={<AdminDashboard />} />} 
+          <Route
+            path="/admin/dashboard"
+            element={<ProtectedRoute element={<AdminDashboard />} />}
           />
-          <Route 
-            path="/admin/orders" 
-            element={<ProtectedRoute element={<AdminOrdersPage />} />} 
+          <Route
+            path="/admin/orders"
+            element={<ProtectedRoute element={<AdminOrdersPage />} />}
           />
-          <Route 
-            path="/admin/customers" 
-            element={<ProtectedRoute element={<AdminCustomersPage />} />} 
+          <Route
+            path="/admin/customers"
+            element={<ProtectedRoute element={<AdminCustomersPage />} />}
           />
-          <Route 
-            path="/admin/products" 
-            element={<ProtectedRoute element={<AdminProductsPage />} />} 
+          <Route
+            path="/admin/products"
+            element={<ProtectedRoute element={<AdminProductsPage />} />}
           />
-          <Route 
-            path="/admin/settings" 
-            element={<ProtectedRoute element={<AdminSettingsPage />} />} 
+          <Route
+            path="/admin/settings"
+            element={<ProtectedRoute element={<AdminSettingsPage />} />}
           />
-          <Route 
-            path="/admin/reports" 
-            element={<ProtectedRoute element={<AdminReportsPage />} />} 
+          <Route
+            path="/admin/reports"
+            element={<ProtectedRoute element={<AdminReportsPage />} />}
           />
         </Routes>
       </BrowserRouter>
@@ -61,3 +64,4 @@ function App() {
 }
 
 export default App;
+

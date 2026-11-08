@@ -90,7 +90,7 @@ export const ProductFilters: React.FC<ProductFiltersProps> = ({
               />
               <span className="ml-2 text-gray-700">Todas</span>
             </label>
-            {categories.map((cat) => (
+            {(Array.isArray(categories) ? categories : []).map((cat) => (
               <label key={cat.id} className="flex items-center">
                 <input
                   type="radio"

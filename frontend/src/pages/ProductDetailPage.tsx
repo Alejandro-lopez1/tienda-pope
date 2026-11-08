@@ -123,7 +123,7 @@ export const ProductDetailPage: React.FC = () => {
                   ))}
                 </div>
                 <span className="ml-2 text-gray-600 text-sm">
-                  {product.rating.toFixed(1)} de 5 ({product.rating_count} reseñas)
+                  {product.rating.toFixed(1)} de 5 ({product.rating_count ?? 0} reseñas)
                 </span>
               </div>
             )}

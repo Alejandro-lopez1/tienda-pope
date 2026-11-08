@@ -44,7 +44,6 @@ export default function AdminProductsPage() {
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -397,7 +396,7 @@ export default function AdminProductsPage() {
                       {formatCurrency(product.price)}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {product.discount_percentage > 0 && (
+                      {parseFloat(product.discount_percentage) > 0 && (
                         <span className="bg-orange-900 text-orange-200 px-2 py-1 rounded text-xs">
                           {product.discount_percentage}%
                         </span>
@@ -580,11 +579,17 @@ export default function AdminProductsPage() {
                     Categoría *
                   </label>
                   <select
-                    value={formData.category || ''}
+                    value={
+                      formData.category == null
+                        ? ''
+                        : typeof formData.category === 'object'
+                          ? formData.category.id
+                          : formData.category
+                    }
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        category: Number(e.target.value),
+                        category: e.target.value ? Number(e.target.value) : undefined,
                       })
                     }
                     className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"

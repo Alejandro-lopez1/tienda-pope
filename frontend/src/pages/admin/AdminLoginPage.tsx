@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 
@@ -39,13 +39,13 @@ export default function AdminLoginPage() {
   };
 
   // Cargar email recordado
-  useState(() => {
+  useEffect(() => {
     const remembered = localStorage.getItem('admin_remembered_email');
     if (remembered) {
       setEmail(remembered);
       setRememberMe(true);
     }
-  });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FF4757] via-[#2C3E50] to-[#7DC41F] flex items-center justify-center px-4">
@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Info de prueba (solo desarrollo) */}
-        {process.env.NODE_ENV === 'development' && (
+        {import.meta.env.DEV && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
             <p className="font-semibold mb-2">🧪 Credenciales de prueba:</p>
             <p>Email: admin@pope.com</p>

@@ -1,279 +1,75 @@
-# Tienda Online Popé
+# Tienda Pope
 
-Plataforma de e-commerce para comercio independiente de productos de limpieza, con catálogo público, carrito de compras, generación de comprobantes PDF y panel administrativo móvil.
+E-commerce MVP para un comercio independiente de productos de limpieza (sin local físico). Catálogo público + panel administrativo mobile-first.
 
-## 🎯 Objetivo
+- **Zonas de entrega (referencia):** Posadas, Garupá, Candelaria
+- **Stack:** Django + Django REST Framework (backend), React + TypeScript + Vite + Tailwind (frontend), PostgreSQL
 
-Reemplazar la actual plataforma Kyte con una solución propia que ofrezca:
-- Interfaz comercial clara para compradores
-- Administración completa desde dispositivos móviles
-- Generación de comprobantes PDF
-- Exportación de operaciones a Excel
+## Regla de negocio (checkout)
+El cliente arma el carrito y, al confirmar, proporciona **nombre, teléfono y dirección**. **No se solicita email.** Los clientes se identifican/agrupan por **teléfono normalizado**.
 
-## 🌍 Ubicación de Servicio
+## Estructura
+```text
+backend/                 # API Django/DRF
+  config/                # settings, urls, wsgi
+  apps/
+    auth/                # autenticación
+    categories/          # categorías
+    products/            # productos
+    orders/              # pedidos, ítems, recibo PDF, WhatsApp
+    customers/           # clientes derivados de pedidos (por teléfono) + exportación
+frontend/                # React + Vite
+docs/
+  spec/PROJECT_SPEC.md   # especificación
+  deploy/NETLIFY.md      # deploy frontend (Netlify) + backend separado
+  history/               # fases/releases/ops archivados
+```
 
-- Posadas
-- Garupá
-- Candelaria
+## Ejecución local
+### Requisitos
+- Python 3.12+ (recomendado), Node.js 18+ (recomendado 20), Docker (opcional)
 
-## 📱 Características Principales
-
-### Catálogo Público
-- Consultar productos sin autenticación
-- Buscar y filtrar por categoría
-- Carrito de compras con localStorage
-- Checkout simplificado
-- Generación de comprobante PDF
-- Enlace directo a WhatsApp
-
-### Panel Administrativo (Mobile-First)
-- Login seguro con JWT
-- Gestión completa de productos
-- Gestión de categorías
-- Consulta y confirmación de pedidos
-- Exportación de operaciones a XLSX
-- Configuración de contacto y horarios
-
-## 🛠 Stack Tecnológico
-
-### Frontend
-- React 18 + TypeScript
-- Vite (build tool)
-- Tailwind CSS
-- Axios (HTTP client)
-- PWA (instalable en móvil)
-
-### Backend
-- Django 4.2
-- Django REST Framework
-- PostgreSQL 15
-- JWT para autenticación
-- Reportlab para generación de PDF
-- Openpyxl para exportación XLSX
-
-### DevOps
-- Docker Compose
-- Railway (hosting recomendado)
-
-## 📋 Documentación
-
-Toda la documentación técnica está en la carpeta `docs/`:
-
-- **[docs/01-REQUIREMENTS.md](docs/01-REQUIREMENTS.md)** - Requerimientos funcionales completos
-- **[docs/02-DESIGN.md](docs/02-DESIGN.md)** - Diseño visual y arquitectura de información
-- **[docs/03-TASKS.md](docs/03-TASKS.md)** - Plan de implementación (48 tareas en 8 fases)
-- **[docs/04-HOSTING_Y_RESUMEN.md](docs/04-HOSTING_Y_RESUMEN.md)** - Recomendaciones de hosting
-
-## 🚀 Inicio Rápido
-
-### Requisitos Previos
-- Python 3.11+
-- Node.js 18+
-- Docker y Docker Compose
-- Git
-
-### Setup Local
-
+### Con Docker Compose
 ```bash
-# Clonar repositorio
-git clone https://github.com/Alejandro-lopez1/tienda-pope.git
-cd tienda-pope
+cp .env.example .env
+docker compose up -d
+```
+- Frontend: http://localhost:5173
+- API: http://localhost:8000
 
-# Cambiar a rama develop
-git checkout develop
-
+### Sin Docker
+```bash
 # Backend
 cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+python -m venv .venv && .venv\Scripts\activate  # Windows
 pip install -r requirements.txt
+set DEBUG=True
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py runserver
 
-# Frontend (en otra terminal)
+# Frontend (otra terminal)
 cd frontend
 npm install
+# VITE_API_URL=http://localhost:8000/api/v1
 npm run dev
 ```
 
-### Con Docker Compose
+## API (principales)
+- `GET/POST /api/v1/categories/`, `/api/v1/products/`
+- `POST /api/v1/orders/` (público, crea pedido)
+- `GET /api/v1/orders/{id}/generate-pdf/`
+- Admin (JWT + staff): `/api/v1/customers/`, `/api/v1/customers/summary/`, `/api/v1/customers/orders/?phone=`, `/api/v1/customers/export/?format=xlsx|csv`
 
-```bash
-docker-compose up -d
-```
+## Exportación (clientes, maestro-detalle)
+`GET /api/v1/customers/export/?format=xlsx|csv` (admin).  
+- **Maestro:** cliente (teléfono, nombre, dirección, métricas).
+- **Detalle:** filas por ítem de pedido (pedido + producto/cantidad/importes), vinculadas al cliente. XLSX en una hoja “Clientes-Detalle”; CSV con BOM para Excel.
 
-Acceder a:
-- Catálogo: http://localhost:5173
-- Admin: http://localhost:5173/admin/login
-- API Docs: http://localhost:8000/api/schema/swagger/
+## Deploy
+- **Frontend:** Netlify (ver `docs/deploy/NETLIFY.md`, `netlify.toml`). Variable: `VITE_API_URL=https://<backend>/api/v1`.
+- **Backend:** host Python (Railway/Render/Fly, etc.) + Postgres. Configurar `DEBUG`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` para la URL del frontend.
 
-## 📊 Estructura del Proyecto
-
-```
-tienda-pope/
-├── README.md                    # Este archivo
-├── docker-compose.yml           # Configuración Docker
-├── .env.example                 # Variables de entorno
-├── .gitignore                   # Archivos ignorados por Git
-│
-├── docs/                        # Documentación técnica
-│   ├── 01-REQUIREMENTS.md
-│   ├── 02-DESIGN.md
-│   ├── 03-TASKS.md
-│   └── 04-HOSTING_Y_RESUMEN.md
-│
-├── backend/                     # API Django REST
-│   ├── manage.py
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   ├── config/
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
-│   ├── apps/
-│   │   ├── authentication/
-│   │   ├── categories/
-│   │   ├── products/
-│   │   ├── orders/
-│   │   └── reports/
-│   └── utils/
-│       ├── pdf_generator.py
-│       ├── xlsx_exporter.py
-│       └── validators.py
-│
-└── frontend/                    # React + Vite
-    ├── package.json
-    ├── vite.config.ts
-    ├── Dockerfile
-    ├── src/
-    │   ├── pages/
-    │   ├── components/
-    │   ├── hooks/
-    │   ├── services/
-    │   └── context/
-    └── public/
-        ├── manifest.json
-        └── icons/
-```
-
-## 🔄 Flujo de Git
-
-### Rama `main`
-- Código estable y listo para producción
-- Solo PRs revisados y probados
-
-### Rama `develop`
-- Rama de desarrollo activo
-- Base para feature branches
-- Donde se integran nuevas funcionalidades
-
-### Flujo Recomendado
-
-```bash
-# Crear feature branch desde develop
-git checkout develop
-git pull origin develop
-git checkout -b feature/nueva-funcionalidad
-
-# Trabajar en la rama
-# ... hacer cambios ...
-git add .
-git commit -m "Descripción del cambio"
-git push origin feature/nueva-funcionalidad
-
-# Crear Pull Request en GitHub hacia develop
-# Después de aprobar, mergear a develop
-```
-
-## 📅 Plan de Implementación
-
-### ✅ Fase 1: Fundaciones (COMPLETADA)
-- ✅ Estructura Docker (PostgreSQL, Django, React)
-- ✅ Configuración Django 4.2 + DRF
-- ✅ Modelos de BD base
-- ✅ Autenticación JWT
-- ✅ CORS y WSGI configurados
-
-**Documentación:** [FASE_1_COMPLETADA.md](FASE_1_COMPLETADA.md)
-
-### ✅ Fase 2: Catálogo (COMPLETADA)
-- ✅ Modelo Category con endpoints CRUD
-- ✅ Modelo Product con endpoints CRUD
-- ✅ Búsqueda avanzada por texto, categoría, precio
-- ✅ Compresión automática de imágenes (800x600px)
-- ✅ Admin Django integrado
-- ✅ Tests unitarios
-
-**Documentación:** [FASE_2_CATALOGO.md](FASE_2_CATALOGO.md)
-
-### ⏳ Fase 3: Carrito y Pedidos
-- [ ] Modelo Cart + CartItem
-- [ ] API endpoints de carrito
-- [ ] Cálculo de totales con descuentos
-
-### ⏳ Fase 4: PDF y WhatsApp
-- [ ] Generador de PDF (reportlab)
-- [ ] Integración WhatsApp
-- [ ] Confirmación de pedido
-
-### ⏳ Fase 5: Panel Admin
-- [ ] Dashboard
-- [ ] Gestión de productos
-- [ ] Gestión de pedidos
-
-### ⏳ Fase 6: Reportes
-- [ ] Exportación XLSX
-- [ ] Filtros y búsqueda
-
-### ⏳ Fase 7: PWA
-- [ ] Web App Manifest
-- [ ] Service Worker
-- [ ] Instalación en móvil
-
-### ⏳ Fase 8: Testing y Deploy
-- [ ] Tests backend
-- [ ] Tests frontend
-- [ ] Tests E2E
-- [ ] Deploy a Railway
-
-## 🔐 Seguridad
-
-- Precios recalculados en backend
-- JWT para autenticación admin
-- Validación dual (frontend + backend)
-- Hashing seguro de contraseñas (bcrypt)
-- CORS configurado
-- HTTPS en producción
-
-## 📱 Paleta de Colores
-
-Extraída del logo corporativo:
-
-```
-Primario:      #FF4757 (Rojo coral)
-Secundario:    #7DC41F (Verde lima)
-Acentos:       #FF9D00 (Naranja), #0DC7D1 (Azul cian)
-Neutros:       #2C3E50 (Gris oscuro)
-```
-
-## 📞 Contacto
-
-**WhatsApp:** +54 9 376 471-0683
-
-## 📄 Licencia
-
-Privado - Popé
-
-## 🤝 Contribuciones
-
-1. Clonar el repo
-2. Crear feature branch desde `develop`
-3. Hacer cambios y tests
-4. Crear Pull Request
-5. Esperar revisión
-
----
-
-**Estado:** En desarrollo (Fase 2 completada, Fase 3 próxima)  
-**Última actualización:** 5 de noviembre de 2026  
-**Versión:** 0.2.0 - Backend de Catálogo Completado
+## Documentación
+- Especificación: `docs/spec/PROJECT_SPEC.md`
+- Deploy: `docs/deploy/NETLIFY.md`
+- Historial: `docs/history/`

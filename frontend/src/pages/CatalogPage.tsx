@@ -46,8 +46,20 @@ export const CatalogPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleFilterChange = (newFilters: typeof filters) => {
-    setFilters(newFilters);
+  const handleFilterChange = (newFilters: {
+    category_id?: number;
+    min_price?: number;
+    max_price?: number;
+    in_stock?: boolean;
+    sort?: string;
+  }) => {
+    setFilters({
+      category_id: newFilters.category_id,
+      min_price: newFilters.min_price,
+      max_price: newFilters.max_price,
+      in_stock: newFilters.in_stock,
+      sort: newFilters.sort ?? '-created_at',
+    });
     setCurrentPage(1);
   };
 

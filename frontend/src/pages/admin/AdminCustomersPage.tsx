@@ -1,19 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatCurrency } from '../../services/api';
 
 interface Customer {
-  customer_email: string;
-  customer_name: string;
   customer_phone: string;
-  customer_address: string;
+  customer_name: string;
+  customer_address?: string | null;
   total_orders: number;
-  total_spent: string;
-  avg_order_value: string;
+  total_spent: string | number;
+  avg_order_value: string | number;
   paid_orders: number;
   pending_orders: number;
-  last_order_date: string;
+  last_order_date: string | null;
+  first_order_date?: string | null;
 }
 
 interface PaginatedResponse {
@@ -23,25 +22,25 @@ interface PaginatedResponse {
   results: Customer[];
 }
 
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
+
+function authHeaders(): HeadersInit {
+  const token = localStorage.getItem('access_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function AdminCustomersPage() {
-  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Filtros
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('-total_spent');
-
-  // Paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Modal
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -51,44 +50,34 @@ export default function AdminCustomersPage() {
     try {
       setLoading(true);
       setError(null);
-
-      let url = '/api/v1/customers/?';
       const params = new URLSearchParams();
-
       if (searchQuery) params.append('search', searchQuery);
       if (sortBy) params.append('ordering', sortBy);
-
       params.append('page', currentPage.toString());
-
-      url += params.toString();
-
-      const response = await fetch(url);
-
+      const response = await fetch(`${API}/customers/?${params.toString()}`, {
+        headers: authHeaders(),
+      });
       if (!response.ok) throw new Error('Error al cargar clientes');
-
       const data: PaginatedResponse = await response.json();
-      setCustomers(data.results);
+      setCustomers(data.results || []);
     } catch (err) {
-      console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar datos');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCustomerOrders = async (email: string) => {
+  const fetchCustomerOrders = async (phone: string) => {
     try {
       setLoadingOrders(true);
       const response = await fetch(
-        `/api/v1/customers/orders_by_email/?email=${encodeURIComponent(email)}`
+        `${API}/customers/orders/?phone=${encodeURIComponent(phone)}`,
+        { headers: authHeaders() }
       );
-
       if (!response.ok) throw new Error('Error al cargar órdenes del cliente');
-
       const data = await response.json();
-      setCustomerOrders(data);
-    } catch (err) {
-      console.error('Error:', err);
+      setCustomerOrders(Array.isArray(data) ? data : []);
+    } catch {
       setCustomerOrders([]);
     } finally {
       setLoadingOrders(false);
@@ -98,7 +87,7 @@ export default function AdminCustomersPage() {
   const handleOpenCustomer = async (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowModal(true);
-    await fetchCustomerOrders(customer.customer_email);
+    await fetchCustomerOrders(customer.customer_phone);
   };
 
   const handleCloseModal = () => {
@@ -132,16 +121,39 @@ export default function AdminCustomersPage() {
   const handleContactWhatsApp = (phone: string) => {
     const message = 'Hola, te contactamos desde Popé sobre tu compra.';
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
+    const digits = String(phone).replace(/\D/g, '');
+    window.open(`https://wa.me/${digits}?text=${encodedMessage}`, '_blank');
+  };
+
+  const handleExport = async (format: 'xlsx' | 'csv') => {
+    try {
+      setExporting(format);
+      const params = new URLSearchParams({ format });
+      if (searchQuery) params.append('search', searchQuery);
+      const response = await fetch(`${API}/customers/export/?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      if (!response.ok) throw new Error('No se pudo exportar');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clientes_detalle.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al exportar');
+    } finally {
+      setExporting(null);
+    }
   };
 
   if (error) {
     return (
       <AdminLayout title="Gestión de Clientes">
-        <div className="bg-red-50 p-4 rounded-lg text-red-700">
-          {error}
-        </div>
+        <div className="bg-red-50 p-4 rounded-lg text-red-700">{error}</div>
       </AdminLayout>
     );
   }
@@ -149,20 +161,34 @@ export default function AdminCustomersPage() {
   return (
     <AdminLayout title="Gestión de Clientes">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <h2 className="text-2xl font-bold text-white">Clientes</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleExport('xlsx')}
+              disabled={exporting !== null}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+            >
+              {exporting === 'xlsx' ? 'Exportando…' : 'Exportar XLSX'}
+            </button>
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={exporting !== null}
+              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+            >
+              {exporting === 'csv' ? 'Exportando…' : 'Exportar CSV'}
+            </button>
+          </div>
         </div>
 
-        {/* Filtros */}
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Buscar por nombre, email o teléfono
+              Buscar por nombre, teléfono o dirección
             </label>
             <input
               type="text"
-              placeholder="Ej: Juan, juan@email.com, +54911234567"
+              placeholder="Ej: Juan, 3764123456"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -173,9 +199,7 @@ export default function AdminCustomersPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Ordenar por
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Ordenar por</label>
             <select
               value={sortBy}
               onChange={(e) => {
@@ -189,11 +213,11 @@ export default function AdminCustomersPage() {
               <option value="-total_orders">Más órdenes</option>
               <option value="total_orders">Menos órdenes</option>
               <option value="customer_name">Nombre (A-Z)</option>
+              <option value="-last_order_date">Última compra</option>
             </select>
           </div>
         </div>
 
-        {/* Tabla */}
         <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-x-auto">
           {loading ? (
             <div className="p-8 text-center text-slate-400">
@@ -201,14 +225,12 @@ export default function AdminCustomersPage() {
               <p className="mt-2">Cargando clientes...</p>
             </div>
           ) : customers.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              No hay clientes registrados
-            </div>
+            <div className="p-8 text-center text-slate-400">No hay clientes registrados</div>
           ) : (
             <table className="w-full text-sm text-slate-300">
               <thead className="bg-slate-700 border-b border-slate-600">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold">Nombre</th>
+                  <th className="px-6 py-3 text-left font-semibold">Cliente</th>
                   <th className="px-6 py-3 text-left font-semibold">Teléfono</th>
                   <th className="px-6 py-3 text-center font-semibold">Órdenes</th>
                   <th className="px-6 py-3 text-right font-semibold">Gasto Total</th>
@@ -220,13 +242,17 @@ export default function AdminCustomersPage() {
               <tbody>
                 {customers.map((customer) => (
                   <tr
-                    key={customer.customer_email}
-                    className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    key={customer.customer_phone}
+                    className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div>
-                        <p className="font-medium text-white">{customer.customer_name}</p>
-                        <p className="text-xs text-slate-400">{customer.customer_email}</p>
+                        <p className="font-medium text-white">{customer.customer_name || '(Sin nombre)'}</p>
+                        {customer.customer_address ? (
+                          <p className="text-xs text-slate-400 truncate max-w-[220px]">
+                            {customer.customer_address}
+                          </p>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-300">{customer.customer_phone}</td>
@@ -242,9 +268,7 @@ export default function AdminCustomersPage() {
                       {formatCurrency(customer.avg_order_value)}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-green-400 font-medium">
-                        {customer.paid_orders}
-                      </span>
+                      <span className="text-green-400 font-medium">{customer.paid_orders}</span>
                       {customer.pending_orders > 0 && (
                         <span className="text-yellow-400 text-xs ml-2">
                           ({customer.pending_orders} pendientes)
@@ -274,7 +298,6 @@ export default function AdminCustomersPage() {
           )}
         </div>
 
-        {/* Paginación */}
         {!loading && customers.length > 0 && (
           <div className="flex justify-center gap-2">
             <button
@@ -284,9 +307,7 @@ export default function AdminCustomersPage() {
             >
               Anterior
             </button>
-            <span className="px-4 py-2 text-slate-400">
-              Página {currentPage}
-            </span>
+            <span className="px-4 py-2 text-slate-400">Página {currentPage}</span>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
               className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition-colors"
@@ -297,52 +318,42 @@ export default function AdminCustomersPage() {
         )}
       </div>
 
-      {/* Modal Detalle */}
       {showModal && selectedCustomer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
             <div className="sticky top-0 bg-slate-700 border-b border-slate-600 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">
-                {selectedCustomer.customer_name}
-              </h3>
-              <button
-                onClick={handleCloseModal}
-                className="text-slate-400 hover:text-white text-2xl"
-              >
+              <h3 className="text-xl font-bold text-white">{selectedCustomer.customer_name || 'Cliente'}</h3>
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-white text-2xl">
                 ✕
               </button>
             </div>
 
-            {/* Contenido */}
             <div className="p-6 space-y-6">
-              {/* Info Cliente */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-slate-400">Email</p>
-                  <p className="text-white font-medium">{selectedCustomer.customer_email}</p>
-                </div>
                 <div>
                   <p className="text-sm text-slate-400">Teléfono</p>
                   <p className="text-white font-medium">{selectedCustomer.customer_phone}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-slate-400">Última compra</p>
+                  <p className="text-white font-medium">
+                    {selectedCustomer.last_order_date
+                      ? new Date(selectedCustomer.last_order_date).toLocaleDateString('es-AR')
+                      : '-'}
+                  </p>
+                </div>
                 {selectedCustomer.customer_address && (
                   <div className="col-span-2">
                     <p className="text-sm text-slate-400">Dirección</p>
-                    <p className="text-white font-medium">
-                      {selectedCustomer.customer_address}
-                    </p>
+                    <p className="text-white font-medium">{selectedCustomer.customer_address}</p>
                   </div>
                 )}
               </div>
 
-              {/* Estadísticas */}
               <div className="grid grid-cols-2 gap-4 bg-slate-700 p-4 rounded-lg">
                 <div>
                   <p className="text-sm text-slate-400">Total Órdenes</p>
-                  <p className="text-2xl font-bold text-white">
-                    {selectedCustomer.total_orders}
-                  </p>
+                  <p className="text-2xl font-bold text-white">{selectedCustomer.total_orders}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-400">Gasto Total</p>
@@ -364,58 +375,31 @@ export default function AdminCustomersPage() {
                 </div>
               </div>
 
-              {/* Órdenes Recientes */}
               <div>
-                <h4 className="text-lg font-semibold text-white mb-4">
-                  Órdenes Recientes
-                </h4>
+                <h4 className="text-lg font-semibold text-white mb-4">Órdenes</h4>
                 {loadingOrders ? (
-                  <div className="text-center text-slate-400">
-                    Cargando órdenes...
-                  </div>
+                  <div className="text-center text-slate-400">Cargando órdenes...</div>
                 ) : customerOrders.length === 0 ? (
-                  <div className="text-center text-slate-400">
-                    No hay órdenes registradas
-                  </div>
+                  <div className="text-center text-slate-400">No hay órdenes registradas</div>
                 ) : (
                   <div className="space-y-3">
                     {customerOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="bg-slate-700 p-4 rounded-lg border border-slate-600"
-                      >
+                      <div key={order.id} className="bg-slate-700 p-4 rounded-lg border border-slate-600">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <p className="font-semibold text-white">
-                              {order.order_number}
-                            </p>
+                            <p className="font-semibold text-white">{order.order_number}</p>
                             <p className="text-sm text-slate-400">
                               {new Date(order.created_at).toLocaleDateString('es-AR')}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-green-400">
-                              {formatCurrency(order.total)}
-                            </p>
+                            <p className="font-bold text-green-400">{formatCurrency(order.total)}</p>
                             <span
-                              className={`inline-block px-3 py-1 rounded text-xs font-medium mt-1 ${getStatusBadgeColor(
-                                order.status
-                              )}`}
+                              className={`inline-block px-3 py-1 rounded text-xs font-medium mt-1 ${getStatusBadgeColor(order.status)}`}
                             >
                               {getStatusLabel(order.status)}
                             </span>
                           </div>
-                        </div>
-                        <div className="flex gap-2 text-xs">
-                          {order.paid ? (
-                            <span className="bg-green-900 text-green-200 px-2 py-1 rounded">
-                              Pagado
-                            </span>
-                          ) : (
-                            <span className="bg-yellow-900 text-yellow-200 px-2 py-1 rounded">
-                              No Pagado
-                            </span>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -423,7 +407,6 @@ export default function AdminCustomersPage() {
                 )}
               </div>
 
-              {/* Acciones */}
               <div className="flex gap-3">
                 <button
                   onClick={() => handleContactWhatsApp(selectedCustomer.customer_phone)}
