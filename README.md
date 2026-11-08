@@ -66,10 +66,11 @@ npm run dev
 - **Detalle:** filas por ítem de pedido (pedido + producto/cantidad/importes), vinculadas al cliente. XLSX en una hoja “Clientes-Detalle”; CSV con BOM para Excel.
 
 ## Deploy
-- **Frontend:** Netlify (ver `docs/deploy/NETLIFY.md`, `netlify.toml`). Variable: `VITE_API_URL=https://<backend>/api/v1`.
-- **Backend:** host Python (Railway/Render/Fly, etc.) + Postgres. Configurar `DEBUG`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` para la URL del frontend.
+- **Frontend:** Netlify (ver `netlify.toml`). Variable: `VITE_API_URL=https://<backend>/api/v1`.
+- **Backend:** Render + PostgreSQL (`DATABASE_URL`, Neon/Render Postgres). **No usar SQLite en Render** (disco efímero). Configurar `DEBUG`, `SECRET_KEY`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`; para imágenes en prod usar R2 (`USE_R2_STORAGE`).
+- Guía: `docs/deploy/RENDER_NETLIFY.md`
 
 ## Documentación
 - Especificación: `docs/spec/PROJECT_SPEC.md`
-- Deploy: `docs/deploy/NETLIFY.md`
+- Deploy: `docs/deploy/RENDER_NETLIFY.md`
 - Historial: `docs/history/`

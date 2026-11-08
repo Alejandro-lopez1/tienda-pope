@@ -1,15 +1,16 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Q
 from django.http import FileResponse
-from django.utils.dateparse import parse_datetime
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.response import Response
 
-from .models import Order, OrderItem
-from .serializers import OrderSerializer, OrderListSerializer, OrderCreateSerializer
+from .models import Order
+from .serializers import OrderCreateSerializer, OrderListSerializer, OrderSerializer
 from .services import PDFReceiptGenerator, WhatsAppMessageGenerator
 
 
@@ -40,14 +41,33 @@ class OrderViewSet(viewsets.ModelViewSet):
         return OrderSerializer
 
     def get_permissions(self):
-        """Permisos según la acción."""
-        if self.action == 'create':
-            # Permitir crear pedidos anónimamente
+        """Permisos según la acción.
+
+        Público: crear pedido y flujo post-compra (confirmación, PDF, WhatsApp).
+        Admin: gestión, listado, estado/pago y datos sensibles agregados.
+        """
+        if self.action in ['create', 'retrieve', 'generate_pdf', 'send_whatsapp']:
             return [AllowAny()]
-        elif self.action in ['list', 'update', 'partial_update', 'destroy']:
-            # Solo admin
-            return [IsAuthenticated()]
-        return [AllowAny()]
+        return [IsAdminUser()]
+
+    def get_object(self):
+        """Permite lookup por pk numérico o por order_number (flujo de confirmación)."""
+        lookup = self.kwargs.get(self.lookup_field or 'pk')
+        qs = self.filter_queryset(self.get_queryset())
+        if lookup is None:
+            raise NotFound('Pedido no encontrado')
+        try:
+            obj = qs.get(pk=int(lookup))
+        except (ValueError, TypeError):
+            obj = qs.filter(order_number=str(lookup)).first()
+        except Order.DoesNotExist:
+            obj = None
+        if obj is None and not isinstance(lookup, int):
+            obj = qs.filter(order_number=str(lookup)).first()
+        if obj is None:
+            raise NotFound('Pedido no encontrado')
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def create(self, request, *args, **kwargs):
         """Crear pedido desde carrito."""

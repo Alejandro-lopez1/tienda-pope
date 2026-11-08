@@ -1,6 +1,10 @@
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
-from .models import Order, OrderItem
+
 from apps.products.serializers import ProductListSerializer
+
+from .models import Order, OrderItem
+from .utils import generate_order_number
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -113,55 +117,73 @@ class OrderCreateSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        """Crear pedido con ítems."""
-        items_data = validated_data.pop('items')
+        """Crear pedido con ítems (transaccional, seguro ante concurrencia)."""
+        from apps.products.models import Product
 
-        # Calcular totales
+        items_data = validated_data.pop('items')
+        resolved = []
+        errors = []
+
+        for idx, item_data in enumerate(items_data):
+            product_id = item_data.get('id')
+            try:
+                quantity = int(item_data.get('quantity', 1))
+            except (TypeError, ValueError):
+                errors.append(f"Ítem {idx}: cantidad inválida.")
+                continue
+            if quantity < 1:
+                errors.append(f"Ítem {idx}: la cantidad debe ser >= 1.")
+                continue
+            if product_id is None:
+                errors.append(f"Ítem {idx}: falta id de producto.")
+                continue
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                errors.append(f"Ítem {idx}: producto {product_id} no existe.")
+                continue
+            resolved.append((product, quantity))
+
+        if errors:
+            raise serializers.ValidationError({"items": errors})
+        if not resolved:
+            raise serializers.ValidationError({"items": ["No hay ítems válidos en el carrito."]})
+
         subtotal = 0
         order_items = []
+        for product, quantity in resolved:
+            price = product.discounted_price if getattr(product, 'discount_percentage', 0) else product.price
+            item_total = price * quantity
+            subtotal += item_total
+            order_items.append({
+                'product': product,
+                'quantity': quantity,
+                'price': price,
+                'discount_percentage': getattr(product, 'discount_percentage', 0) or 0,
+            })
 
-        for item_data in items_data:
-            product_id = item_data.get('id')
-            quantity = item_data.get('quantity', 1)
-
+        last_err = None
+        for _ in range(5):
             try:
-                from apps.products.models import Product
-                product = Product.objects.get(id=product_id)
-
-                # Usar precio con descuento si existe
-                price = product.discounted_price if product.discount_percentage > 0 else product.price
-                item_total = price * quantity
-                subtotal += item_total
-
-                order_items.append({
-                    'product': product,
-                    'quantity': quantity,
-                    'price': price,
-                    'discount_percentage': product.discount_percentage,
-                })
-            except Exception:
+                with transaction.atomic():
+                    order = Order.objects.create(
+                        order_number=generate_order_number(),
+                        customer_name=validated_data['customer_name'],
+                        customer_phone=validated_data['customer_phone'],
+                        customer_email=validated_data.get('customer_email') or '',
+                        customer_address=validated_data.get('customer_address') or '',
+                        payment_method=validated_data['payment_method'],
+                        notes=validated_data.get('notes', ''),
+                        subtotal=subtotal,
+                        total=subtotal,
+                    )
+                    OrderItem.objects.bulk_create([
+                        OrderItem(order=order, **item_data) for item_data in order_items
+                    ])
+                return order
+            except IntegrityError as err:
+                last_err = err
                 continue
-
-        # Crear pedido
-        order = Order.objects.create(
-            customer_name=validated_data['customer_name'],
-            customer_phone=validated_data['customer_phone'],
-            customer_email=validated_data.get('customer_email') or '',
-            customer_address=validated_data.get('customer_address') or '',
-            payment_method=validated_data['payment_method'],
-            notes=validated_data.get('notes', ''),
-            subtotal=subtotal,
-            total=subtotal,
-        )
-
-        # Crear ítems del pedido
-        for item_data in order_items:
-            OrderItem.objects.create(
-                order=order,
-                product=item_data['product'],
-                quantity=item_data['quantity'],
-                price=item_data['price'],
-                discount_percentage=item_data['discount_percentage'],
-            )
-
-        return order
+        raise serializers.ValidationError(
+            {"non_field_errors": ["No se pudo generar el pedido. Intentá nuevamente."]}
+        ) from last_err

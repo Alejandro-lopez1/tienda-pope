@@ -34,18 +34,20 @@ def health_check(request):
 urlpatterns = [
     # Health check endpoint
     path('health/', health_check, name='health_check'),
-    
+
     # Admin and API
     path('admin/', admin.site.urls),
-    path('api/v1/', include('rest_framework.urls')),
     # API endpoints
     path('api/v1/auth/', include('apps.auth.urls')),
     path('api/v1/categories/', include('apps.categories.urls')),
     path('api/v1/products/', include('apps.products.urls')),
     path('api/v1/orders/', include('apps.orders.urls')),
     path('api/v1/customers/', include('apps.customers.urls')),
-    # path('api/v1/reports/', include('apps.reports.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += [path('api/v1/api-auth/', include('rest_framework.urls'))]
+
 
 # Serve media files in development
 if settings.DEBUG:

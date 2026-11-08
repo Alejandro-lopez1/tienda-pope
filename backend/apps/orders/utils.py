@@ -1,4 +1,7 @@
 import re
+import secrets
+
+from django.utils import timezone
 
 
 def normalize_phone(phone: str | None) -> str:
@@ -16,3 +19,15 @@ def normalize_phone(phone: str | None) -> str:
     if len(digits) > 10 and digits.startswith("0"):
         digits = digits[1:]
     return digits
+
+
+def generate_order_number() -> str:
+    """Generate a candidate order number.
+
+    Uniqueness is enforced by the DB; callers creating under concurrency should
+    retry on IntegrityError.
+    """
+    today = timezone.localdate().strftime("%Y%m%d")
+    suffix = secrets.token_hex(2).upper()  # 4 chars, adds entropy under races
+    return f"ORD-{today}-{suffix}"
+
