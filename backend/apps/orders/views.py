@@ -155,6 +155,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=order.pk)
             previous = order.status
+            if previous == 'cancelled' and new_status != 'cancelled':
+                return Response(
+                    {'error': 'No se puede reabrir un pedido cancelado. Creá un pedido nuevo.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             if new_status == 'cancelled' and previous != 'cancelled':
                 items = list(order.items.select_related(None).values_list('product_id', 'quantity'))
                 if items:
