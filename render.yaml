@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: pip install -r backend/requirements.txt && cd backend && python manage.py collectstatic --noinput
     startCommand: cd backend && python manage.py migrate && gunicorn -c gunicorn_config.py config.wsgi
+    healthCheckPath: /health/
     envVars:
       - key: DEBUG
         value: "False"
@@ -22,5 +23,19 @@ services:
         value: info
       - key: NUM_PROXIES
         value: "1"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: USE_R2_STORAGE
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: R2_PUBLIC_HOST
+        sync: false
       - key: PYTHON_VERSION
         value: "3.12.3"

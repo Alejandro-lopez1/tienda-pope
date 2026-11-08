@@ -42,7 +42,7 @@
 - Admin > Clientes (por teléfono) y **Exportar XLSX/CSV**.
 
 ## 5) Concurrencia / race condition (pedidos)
-- El número de pedido se genera con entropía y la creación corre en `transaction.atomic()` con reintento ante colisión `IntegrityError` (`backend/apps/orders/utils.py`, `serializers.py`). Los ítems se validan (sin drops silenciosos).
+- El número de pedido se genera con entropía y la creación corre en `transaction.atomic()` con reintento ante colisión `IntegrityError`. Ítems validados (sin drops silenciosos). **Stock:** se descuenta con `select_for_update()` + verificación atómica dentro de la transacción (anti-sobreventa).
 - Prueba: emular pedidos simultáneos contra `POST /api/v1/orders/` y verificar 201, `order_number` únicos, sin 500.
 
 Ejemplo rápido (ajustar `BASE`, `PRODUCT_ID` válido):
@@ -66,3 +66,4 @@ PY
 - Operaciones admin (listar/modificar pedidos, clientes/export) requieren staff. El flujo público post-compra (ver pedido, PDF, WhatsApp por `order_number`) permanece accesible para la confirmación; **no** se resuelve por `pk` numérico para anónimos (anti-enumeración). `order_number` tiene alta entropía.
 - Throttling por scope en acciones públicas de pedidos (`orders_create`, `orders_public`), sin throttles globales anon/user. `NUM_PROXIES=1`.
 - Browsable API de DRF solo en `DEBUG`. Errores 500 devuelven mensaje genérico (sin filtrar excepciones).
+- Frontend `apiFetch`: la confirmación/PDF/WhatsApp públicos no envían `Authorization` (evita 401 con token admin vencido). `SECURE_REDIRECT_EXEMPT` incluye `/health/` para el healthcheck de Render.

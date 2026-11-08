@@ -42,7 +42,7 @@ export default function OrderConfirmationPage() {
       if (!orderId) return;
       try {
         setLoading(true);
-        const response = await apiFetch(`/orders/${orderId}/`);
+        const response = await apiFetch(`/orders/${orderId}/`, { auth: false });
         if (!response.ok) throw new Error('No se pudo cargar el pedido');
         const data: Order = await response.json();
         setOrder(data);
@@ -62,7 +62,7 @@ export default function OrderConfirmationPage() {
     if (!orderId) return;
     try {
       setDownloadingPdf(true);
-      const response = await apiFetch(`/orders/${orderId}/generate-pdf/`);
+      const response = await apiFetch(`/orders/${orderId}/generate-pdf/`, { auth: false });
       if (!response.ok) throw new Error('Error al generar PDF');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -85,7 +85,7 @@ export default function OrderConfirmationPage() {
     if (!orderId) return;
     try {
       setSendingWhatsapp(true);
-      const response = await apiFetch(`/orders/${orderId}/send-whatsapp/`, { method: 'POST' });
+      const response = await apiFetch(`/orders/${orderId}/send-whatsapp/`, { method: 'POST', auth: false });
       if (!response.ok) throw new Error('Error al generar enlace de WhatsApp');
       const data = await response.json();
       window.open(data.whatsapp_link, '_blank');

@@ -6,6 +6,8 @@ from apps.products.serializers import ProductListSerializer
 from .models import Order, OrderItem
 from .utils import generate_order_number
 
+MAX_ITEM_QUANTITY = 99
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     """Serializador para ítems de pedido."""
@@ -117,14 +119,14 @@ class OrderCreateSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        """Crear pedido con ítems (transaccional, seguro ante concurrencia)."""
+        """Crear pedido con ítems (transaccional, anti-sobreventa, reintento por colisión)."""
+        from django.db.models import F
+
         from apps.products.models import Product
 
         items_data = validated_data.pop('items')
-        resolved = []
+        requested = {}
         errors = []
-
-        max_qty = 99
         for idx, item_data in enumerate(items_data):
             product_id = item_data.get('id')
             try:
@@ -132,44 +134,60 @@ class OrderCreateSerializer(serializers.Serializer):
             except (TypeError, ValueError):
                 errors.append(f"Ítem {idx}: cantidad inválida.")
                 continue
-            if quantity < 1 or quantity > max_qty:
-                errors.append(f"Ítem {idx}: la cantidad debe estar entre 1 y {max_qty}.")
+            if quantity < 1 or quantity > MAX_ITEM_QUANTITY:
+                errors.append(f"Ítem {idx}: la cantidad debe estar entre 1 y {MAX_ITEM_QUANTITY}.")
                 continue
             if product_id is None:
                 errors.append(f"Ítem {idx}: falta id de producto.")
                 continue
-            try:
-                product = Product.objects.get(id=product_id, is_active=True)
-            except Product.DoesNotExist:
-                errors.append(f"Ítem {idx}: producto {product_id} no disponible.")
-                continue
-            if hasattr(product, 'stock') and product.stock < quantity:
-                errors.append(f"Ítem {idx}: stock insuficiente para {getattr(product, 'name', product_id)}.")
-                continue
-            resolved.append((product, quantity))
+            pid = int(product_id)
+            requested[pid] = requested.get(pid, 0) + quantity
 
         if errors:
             raise serializers.ValidationError({"items": errors})
-        if not resolved:
+        if not requested:
             raise serializers.ValidationError({"items": ["No hay ítems válidos en el carrito."]})
-
-        subtotal = 0
-        order_items = []
-        for product, quantity in resolved:
-            price = product.discounted_price if getattr(product, 'discount_percentage', 0) else product.price
-            item_total = price * quantity
-            subtotal += item_total
-            order_items.append({
-                'product': product,
-                'quantity': quantity,
-                'price': price,
-                'discount_percentage': getattr(product, 'discount_percentage', 0) or 0,
-            })
+        for pid, qty in requested.items():
+            if qty > MAX_ITEM_QUANTITY:
+                raise serializers.ValidationError({"items": [f"Producto {pid}: cantidad total excede {MAX_ITEM_QUANTITY}."]})
 
         last_err = None
         for _ in range(5):
             try:
                 with transaction.atomic():
+                    locked = list(
+                        Product.objects.select_for_update()
+                        .filter(id__in=requested.keys(), is_active=True)
+                    )
+                    found = {p.id: p for p in locked}
+                    missing = [pid for pid in requested if pid not in found]
+                    if missing:
+                        raise serializers.ValidationError({"items": [f"Producto(s) no disponible(s): {missing}"]})
+                    stock_errors = []
+                    for pid, qty in requested.items():
+                        p = found[pid]
+                        if hasattr(p, 'stock') and p.stock < qty:
+                            stock_errors.append(f"Stock insuficiente para {getattr(p, 'name', pid)}.")
+                    if stock_errors:
+                        raise serializers.ValidationError({"items": stock_errors})
+
+                    subtotal = 0
+                    order_items = []
+                    for pid, qty in requested.items():
+                        p = found[pid]
+                        price = p.discounted_price if getattr(p, 'discount_percentage', 0) else p.price
+                        subtotal += price * qty
+                        order_items.append({
+                            'product': p,
+                            'quantity': qty,
+                            'price': price,
+                            'discount_percentage': getattr(p, 'discount_percentage', 0) or 0,
+                        })
+                        if hasattr(p, 'stock'):
+                            updated = Product.objects.filter(id=pid, stock__gte=qty).update(stock=F('stock') - qty)
+                            if updated != 1:
+                                raise serializers.ValidationError({"items": [f"Stock insuficiente para {getattr(p, 'name', pid)}."]})
+
                     order = Order.objects.create(
                         order_number=generate_order_number(),
                         customer_name=validated_data['customer_name'],
@@ -188,6 +206,8 @@ class OrderCreateSerializer(serializers.Serializer):
             except IntegrityError as err:
                 last_err = err
                 continue
+            except serializers.ValidationError:
+                raise
         raise serializers.ValidationError(
             {"non_field_errors": ["No se pudo generar el pedido. Intentá nuevamente."]}
         ) from last_err

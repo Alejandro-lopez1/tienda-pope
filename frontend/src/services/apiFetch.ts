@@ -4,17 +4,20 @@ function getAuthToken(): string | null {
   return localStorage.getItem('admin_access_token') || localStorage.getItem('access_token');
 }
 
-export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+type ApiFetchOptions = RequestInit & { auth?: boolean };
+
+export async function apiFetch(path: string, init: ApiFetchOptions = {}): Promise<Response> {
+  const { auth = true, ...rest } = init;
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-  const headers = new Headers(init.headers || {});
+  const headers = new Headers(rest.headers || {});
   const token = getAuthToken();
-  if (token && !headers.has('Authorization')) {
+  if (auth && token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
+  if (rest.body && !(rest.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  return fetch(url, { ...init, headers });
+  return fetch(url, { ...rest, headers });
 }
 
 export { API_BASE_URL };
