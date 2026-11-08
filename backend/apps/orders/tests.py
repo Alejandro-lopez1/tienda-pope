@@ -107,3 +107,41 @@ class OrderLookupPermissionTests(APITestCase):
     def test_anonymous_list_returns_401_or_403(self):
         res = self.client.get('/api/v1/orders/')
         self.assertIn(res.status_code, (401, 403))
+
+
+class OrderStockTests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='StockCat')
+        self.product = Product.objects.create(
+            name='ProdStock',
+            sku='SKU-STOCK-1',
+            category=self.category,
+            description='x',
+            price=Decimal('50.00'),
+            stock=5,
+            is_active=True,
+        )
+
+    def _payload(self, quantity=2):
+        return {
+            'customer_name': 'Cliente',
+            'customer_phone': '3764111222',
+            'customer_address': 'Calle 123',
+            'payment_method': 'cash',
+            'items': [{'id': self.product.id, 'quantity': quantity}],
+        }
+
+    def test_create_order_decrements_stock(self):
+        res = self.client.post('/api/v1/orders/', self._payload(quantity=2), format='json')
+        self.assertEqual(res.status_code, 201)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 3)
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_insufficient_stock_returns_400_and_creates_no_order(self):
+        before = Order.objects.count()
+        res = self.client.post('/api/v1/orders/', self._payload(quantity=99), format='json')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(Order.objects.count(), before)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, 5)

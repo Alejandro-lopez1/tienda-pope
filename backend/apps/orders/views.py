@@ -1,5 +1,7 @@
 import logging
 
+from django.db import transaction
+from django.db.models import F
 from django.http import FileResponse
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -10,6 +12,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
+
+from apps.products.models import Product
 
 from .models import Order
 from .serializers import OrderCreateSerializer, OrderListSerializer, OrderSerializer
@@ -132,25 +136,36 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
-        """Actualizar estado del pedido."""
+        """Actualizar estado del pedido (repone stock al cancelar)."""
         if not request.user or not request.user.is_staff:
             return Response(
                 {'error': 'Solo administradores pueden cambiar estado'},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
-        
+
         order = self.get_object()
         new_status = request.data.get('status')
-        
-        if new_status not in [choice[0] for choice in Order.ORDER_STATUS]:
+        valid = [choice[0] for choice in Order.ORDER_STATUS]
+        if new_status not in valid:
             return Response(
-                {'error': f'Estado inválido. Opciones: {[choice[0] for choice in Order.ORDER_STATUS]}'},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': f'Estado inválido. Opciones: {valid}'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        order.status = new_status
-        order.save()
-        
+
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=order.pk)
+            previous = order.status
+            if new_status == 'cancelled' and previous != 'cancelled':
+                items = list(order.items.select_related(None).values_list('product_id', 'quantity'))
+                if items:
+                    pids = [pid for pid, _ in items]
+                    list(Product.objects.select_for_update().order_by('id').filter(id__in=pids))
+                    for pid, qty in items:
+                        Product.objects.filter(id=pid).update(stock=F('stock') + qty)
+            order.status = new_status
+            order.save(update_fields=['status', 'updated_at'])
+
+        order.refresh_from_db()
         serializer = self.get_serializer(order)
         return Response(serializer.data)
 

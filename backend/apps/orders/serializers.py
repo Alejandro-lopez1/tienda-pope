@@ -140,7 +140,11 @@ class OrderCreateSerializer(serializers.Serializer):
             if product_id is None:
                 errors.append(f"Ítem {idx}: falta id de producto.")
                 continue
-            pid = int(product_id)
+            try:
+                pid = int(product_id)
+            except (TypeError, ValueError):
+                errors.append(f"Ítem {idx}: id de producto inválido.")
+                continue
             requested[pid] = requested.get(pid, 0) + quantity
 
         if errors:
@@ -157,6 +161,7 @@ class OrderCreateSerializer(serializers.Serializer):
                 with transaction.atomic():
                     locked = list(
                         Product.objects.select_for_update()
+                        .order_by('id')
                         .filter(id__in=requested.keys(), is_active=True)
                     )
                     found = {p.id: p for p in locked}
