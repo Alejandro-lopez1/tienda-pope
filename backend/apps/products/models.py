@@ -1,12 +1,16 @@
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils.text import slugify
-from PIL import Image
-from io import BytesIO
-from django.core.files.base import ContentFile
+import logging
 import os
+from io import BytesIO
+
+from django.core.files.base import ContentFile
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils.text import slugify
+from PIL import Image, ImageOps
 
 from apps.categories.models import Category
+
+logger = logging.getLogger(__name__)
 
 
 class Product(models.Model):
@@ -113,52 +117,39 @@ class Product(models.Model):
                 counter += 1
             self.slug = slug
 
-        # Comprimir imagen si es nueva o fue actualizada
-        if self.image and (not self.image_thumbnail or self.image.name):
-            self._compress_image()
+        # Recomprimir SOLO si se asignó una imagen nueva (no descargar la guardada)
+        if self.image and not self.image._committed:
+            try:
+                self._compress_image()
+            except Exception:
+                logger.exception('Error al procesar imagen de producto %s', self.sku)
 
         super().save(*args, **kwargs)
 
     def _compress_image(self):
-        """
-        Comprimir imagen a 800x600px máximo.
-        Reduce tamaño para mejorar velocidad de carga.
-        """
-        try:
-            if not self.image:
-                return
+        """Procesa una imagen nueva: corrige EXIF, normaliza RGB, redimensiona y genera thumbnail."""
+        self.image.seek(0)
+        img = Image.open(self.image)
+        img = ImageOps.exif_transpose(img)
+        img = img.convert('RGB')
 
-            img = Image.open(self.image)
-            
-            # Convertir RGBA a RGB si es necesario
-            if img.mode in ('RGBA', 'LA', 'P'):
-                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = rgb_img
+        basename = os.path.splitext(os.path.basename(self.image.name or 'image'))[0] or 'image'
 
-            # Redimensionar si es mayor a 800x600
-            max_width = 800
-            max_height = 600
-            img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+        # Imagen principal: máx 1200x1200, reemplaza el archivo subido
+        main = img.copy()
+        main.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+        main_io = BytesIO()
+        main.save(main_io, format='JPEG', quality=85, optimize=True)
+        main_io.seek(0)
+        self.image.save(f"{basename}.jpg", ContentFile(main_io.read()), save=False)
 
-            # Guardar comprimido
-            img_io = BytesIO()
-            img.save(img_io, format='JPEG', quality=85, optimize=True)
-            img_io.seek(0)
-
-            # Generar nombre para thumbnail
-            filename = os.path.splitext(self.image.name)[0]
-            thumb_filename = f"{filename}_thumb.jpg"
-
-            # Guardar thumbnail
-            self.image_thumbnail.save(
-                thumb_filename,
-                ContentFile(img_io.getvalue()),
-                save=False
-            )
-        except Exception as e:
-            # Log error pero no interrumpir guardado
-            print(f"Error compressing image: {e}")
+        # Thumbnail: máx 400x400 en products/thumbnails/<basename>.jpg (sin rutas anidadas)
+        thumb = img.copy()
+        thumb.thumbnail((400, 400), Image.Resampling.LANCZOS)
+        thumb_io = BytesIO()
+        thumb.save(thumb_io, format='JPEG', quality=85, optimize=True)
+        thumb_io.seek(0)
+        self.image_thumbnail.save(f"{basename}.jpg", ContentFile(thumb_io.read()), save=False)
 
     @property
     def discounted_price(self):

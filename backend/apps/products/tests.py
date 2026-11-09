@@ -1,13 +1,23 @@
+from io import BytesIO
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from io import BytesIO
-
 from PIL import Image
 from rest_framework.test import APITestCase
 
 from apps.categories.models import Category
 from .models import Product
+
+
+def make_image_file(name='test.jpg', size=(100, 100), color='red'):
+    img = Image.new('RGB', size, color=color)
+    buf = BytesIO()
+    img.save(buf, format='JPEG')
+    buf.seek(0)
+    return SimpleUploadedFile(name, buf.read(), content_type='image/jpeg')
 
 
 class ProductModelTest(TestCase):
@@ -62,6 +72,24 @@ class ProductModelTest(TestCase):
         self.assertEqual(p1.slug, 'mismo-nombre')
         self.assertEqual(p2.slug, 'mismo-nombre-2')
         self.assertNotEqual(p1.slug, p2.slug)
+
+    def test_new_image_generates_thumbnail(self):
+        self.assertTrue(self.product.image)
+        self.assertTrue(self.product.image_thumbnail)
+
+    def test_large_image_is_resized_to_max_1200(self):
+        p = Product.objects.create(
+            name='Grande',
+            sku='BIG-001',
+            category=self.category,
+            description='Imagen grande',
+            price=100,
+            stock=1,
+            image=make_image_file('big.jpg', size=(3000, 2000)),
+        )
+        p.image.open('rb')
+        with Image.open(p.image) as img:
+            self.assertLessEqual(max(img.size), 1200)
 
 
 class ProductAPITests(APITestCase):
@@ -136,3 +164,27 @@ class ProductAPITests(APITestCase):
         self.client.logout()
         res = self.client.get(f'/api/v1/products/{p.slug}/')
         self.assertEqual(res.status_code, 404)
+
+    def test_patch_stock_and_is_active_does_not_reupload_image(self):
+        self.client.force_authenticate(user=self.staff)
+        p = Product.objects.create(
+            name='Con Imagen',
+            sku='IMG-001',
+            category=self.category,
+            description='Tiene imagen',
+            price=100,
+            stock=5,
+            is_active=True,
+            image=make_image_file('keep.jpg', size=(200, 200)),
+        )
+        with patch.object(default_storage, 'save', wraps=default_storage.save) as mock_save:
+            res = self.client.patch(
+                f'/api/v1/products/{p.id}/',
+                {'stock': 9, 'is_active': False},
+                format='json',
+            )
+        self.assertEqual(res.status_code, 200, res.json() if res.content else res.status_code)
+        mock_save.assert_not_called()
+        p.refresh_from_db()
+        self.assertEqual(p.stock, 9)
+        self.assertFalse(p.is_active)
