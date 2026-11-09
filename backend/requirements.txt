@@ -11,6 +11,9 @@ psycopg2-binary==2.9.9
 # Image processing
 Pillow==11.0.0
 
+# Cloud media storage (uploads served via Cloudinary when CLOUDINARY_URL is set)
+cloudinary==1.47.0
+
 # PDF generation
 reportlab==4.0.7
 

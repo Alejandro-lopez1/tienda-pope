@@ -156,7 +156,7 @@ if USE_R2:
             "Set it to your R2 bucket's public hostname (without https://). "
             "Example: cdn.example.com or pub-<hash>.r2.dev"
         )
-    
+
     R2_PUBLIC_HOST = os.environ["R2_PUBLIC_HOST"]
     INSTALLED_APPS = list(INSTALLED_APPS) + ["storages"]
     AWS_STORAGE_BUCKET_NAME = os.environ["R2_BUCKET_NAME"]
@@ -173,6 +173,12 @@ if USE_R2:
         },
     }
     MEDIA_URL = f"https://{R2_PUBLIC_HOST}/media/"
+
+# Cloudinary takes priority when configured (CLOUDINARY_URL env). Keeps R2 intact.
+if os.environ.get('CLOUDINARY_URL'):
+    STORAGES["default"] = {
+        "BACKEND": "apps.products.storage.CloudinaryMediaStorage",
+    }
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
