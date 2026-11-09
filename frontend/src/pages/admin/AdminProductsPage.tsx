@@ -14,6 +14,7 @@ interface PaginatedResponse { count: number; next: string | null; previous: stri
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,16 +26,51 @@ export default function AdminProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Product>>({});
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   useEffect(() => { fetchCategories(); fetchProducts(); }, [searchQuery, categoryFilter, statusFilter, sortBy, currentPage]);
 
   const fetchCategories = async () => {
     try {
+      setCategoriesLoading(true);
       const response = await apiFetch('/categories/');
       if (!response.ok) throw new Error('Error al cargar categorías');
       const data = await response.json();
-      setCategories(data.results || data);
-    } catch (err) { console.error('Error:', err); }
+      const list = Array.isArray(data) ? data : (data.results || []);
+      setCategories(list);
+      return list as Category[];
+    } catch (err) {
+      console.error('Error:', err);
+      return [] as Category[];
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    try {
+      setCreatingCategory(true);
+      const response = await apiFetch('/categories/', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(typeof err === 'object' ? Object.values(err as any).flat().join(', ') : 'No se pudo crear la categoría');
+      }
+      const created = await response.json();
+      const list = await fetchCategories();
+      const id = created?.id ?? list.find((c) => c.name === name)?.id;
+      if (id) setFormData((prev) => ({ ...prev, category: id }));
+      setNewCategoryName('');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al crear categoría');
+    } finally {
+      setCreatingCategory(false);
+    }
   };
 
   const fetchProducts = async () => {
@@ -175,8 +211,17 @@ export default function AdminProductsPage() {
                 <div><label className="block text-sm font-medium text-slate-300 mb-2">Stock</label><input type="number" min="0" value={formData.stock ?? '0'} onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500" /></div>
                 <div><label className="block text-sm font-medium text-slate-300 mb-2">Categoría *</label>
                   <select value={formData.category == null ? '' : typeof formData.category === 'object' ? formData.category.id : formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value ? Number(e.target.value) : undefined })} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500">
-                    <option value="">Seleccionar...</option>{categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
-                  </select></div>
+                    <option value="">{categoriesLoading ? 'Cargando categorías...' : 'Seleccionar...'}</option>{categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+                  </select>
+                  {!categoriesLoading && categories.length === 0 && (
+                    <div className="mt-2 p-2 bg-amber-900/30 border border-amber-700 rounded text-xs text-amber-200">
+                      No hay categorías. Creá una para continuar:
+                      <div className="mt-2 flex gap-2">
+                        <input type="text" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Nombre (ej: Limpieza)" className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 text-white rounded focus:outline-none focus:border-blue-500" />
+                        <button type="button" onClick={handleCreateCategory} disabled={creatingCategory || !newCategoryName.trim()} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium">{creatingCategory ? '...' : 'Crear'}</button>
+                      </div>
+                    </div>
+                  )}</div>
               </div>
               <div><label className="block text-sm font-medium text-slate-300 mb-2">Descripción</label><textarea value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500" /></div>
               <div className="grid grid-cols-2 gap-4">
