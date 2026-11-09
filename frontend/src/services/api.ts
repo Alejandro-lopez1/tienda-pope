@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from './apiFetch';
 
 interface Category {
   id: number;
@@ -78,7 +77,7 @@ class ApiService {
 
     // Agregar token JWT si existe
     this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('admin_access_token') || localStorage.getItem('access_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

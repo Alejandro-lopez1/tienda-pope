@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { formatCurrency } from '../../services/api';
+import { apiFetch } from '../../services/apiFetch';
 
 interface Customer {
   customer_phone: string;
@@ -22,12 +23,7 @@ interface PaginatedResponse {
   results: Customer[];
 }
 
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/$/, '');
-
-function authHeaders(): HeadersInit {
-  const token = localStorage.getItem('access_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+/* Auth/base URL handled by apiFetch (services/apiFetch.ts). */
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -54,9 +50,8 @@ export default function AdminCustomersPage() {
       if (searchQuery) params.append('search', searchQuery);
       if (sortBy) params.append('ordering', sortBy);
       params.append('page', currentPage.toString());
-      const response = await fetch(`${API}/customers/?${params.toString()}`, {
-        headers: authHeaders(),
-      });
+      const response = await apiFetch(`/customers/?${params.toString()}`);
+      if (response.status === 401) return;
       if (!response.ok) throw new Error('Error al cargar clientes');
       const data: PaginatedResponse = await response.json();
       setCustomers(data.results || []);
@@ -70,10 +65,8 @@ export default function AdminCustomersPage() {
   const fetchCustomerOrders = async (phone: string) => {
     try {
       setLoadingOrders(true);
-      const response = await fetch(
-        `${API}/customers/orders/?phone=${encodeURIComponent(phone)}`,
-        { headers: authHeaders() }
-      );
+      const response = await apiFetch(`/customers/orders/?phone=${encodeURIComponent(phone)}`);
+      if (response.status === 401) return;
       if (!response.ok) throw new Error('Error al cargar órdenes del cliente');
       const data = await response.json();
       setCustomerOrders(Array.isArray(data) ? data : []);
@@ -130,9 +123,8 @@ export default function AdminCustomersPage() {
       setExporting(format);
       const params = new URLSearchParams({ format });
       if (searchQuery) params.append('search', searchQuery);
-      const response = await fetch(`${API}/customers/export/?${params.toString()}`, {
-        headers: authHeaders(),
-      });
+      const response = await apiFetch(`/customers/export/?${params.toString()}`);
+      if (response.status === 401) return;
       if (!response.ok) throw new Error('No se pudo exportar');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
