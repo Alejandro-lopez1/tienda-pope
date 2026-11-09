@@ -181,7 +181,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(order)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], url_path='generate-pdf')
     def generate_pdf(self, request, pk=None):
         """Generar y descargar recibo PDF del pedido (público, por order_number)."""
         try:
@@ -204,7 +204,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='send-whatsapp')
     def send_whatsapp(self, request, pk=None):
         """Generar enlace de WhatsApp con mensaje del pedido (público)."""
         try:
@@ -229,10 +229,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        order = self.get_object()
-        order.paid = True
-        order.paid_at = timezone.now()
-        order.save()
+        obj = self.get_object()
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=obj.pk)
+            if order.status == 'cancelled':
+                return Response(
+                    {'error': 'No se puede marcar como pagado un pedido cancelado'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if order.status == 'pending':
+                order.status = 'confirmed'
+            order.paid = True
+            order.paid_at = timezone.now()
+            order.save(update_fields=['paid', 'paid_at', 'status', 'updated_at'])
 
+        order.refresh_from_db()
         serializer = self.get_serializer(order)
         return Response(serializer.data)

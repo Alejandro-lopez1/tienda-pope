@@ -1,4 +1,6 @@
 from decimal import Decimal
+from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -145,3 +147,61 @@ class OrderStockTests(APITestCase):
         self.assertEqual(Order.objects.count(), before)
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 5)
+
+
+class OrderActionsTests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='AccionCat')
+        self.product = Product.objects.create(
+            name='ProdAccion',
+            sku='SKU-ACT-1',
+            category=self.category,
+            description='x',
+            price=Decimal('80.00'),
+            stock=10,
+            is_active=True,
+        )
+        self.order = Order.objects.create(
+            customer_name='Beto',
+            customer_phone='3764555666',
+            customer_address='Dir 9',
+            payment_method='cash',
+            subtotal=Decimal('80.00'),
+            total=Decimal('80.00'),
+            status='pending',
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=1,
+            price=Decimal('80.00'),
+        )
+        User = get_user_model()
+        self.staff = User.objects.create_user(username='staffact', password='pass12345', is_staff=True)
+
+    def test_generate_pdf_by_order_number_returns_pdf(self):
+        buf = BytesIO(b'%PDF-1.4 test')
+        with patch('apps.orders.views.PDFReceiptGenerator') as MockGen:
+            MockGen.return_value.generate.return_value = buf
+            res = self.client.get(f'/api/v1/orders/{self.order.order_number}/generate-pdf/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
+
+    def test_mark_paid_pending_sets_paid_and_confirmed(self):
+        self.client.force_authenticate(user=self.staff)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/mark_paid/', {}, format='json')
+        self.assertEqual(res.status_code, 200, res.json() if res.content else res.status_code)
+        self.order.refresh_from_db()
+        self.assertTrue(self.order.paid)
+        self.assertIsNotNone(self.order.paid_at)
+        self.assertEqual(self.order.status, 'confirmed')
+
+    def test_mark_paid_cancelled_returns_400(self):
+        self.order.status = 'cancelled'
+        self.order.save(update_fields=['status'])
+        self.client.force_authenticate(user=self.staff)
+        res = self.client.post(f'/api/v1/orders/{self.order.id}/mark_paid/', {}, format='json')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get('error'), 'No se puede marcar como pagado un pedido cancelado')
+        self.order.refresh_from_db()
+        self.assertFalse(self.order.paid)
