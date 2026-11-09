@@ -83,7 +83,11 @@ class OrderListSerializer(serializers.ModelSerializer):
             'order_number',
             'status',
             'customer_name',
+            'customer_phone',
             'total',
+            'payment_method',
+            'paid',
+            'paid_at',
             'item_count',
             'created_at',
         ]
