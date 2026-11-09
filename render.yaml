@@ -20,7 +20,7 @@ services:
       - key: CSRF_TRUSTED_ORIGINS
         sync: false
       - key: LOG_LEVEL
-        value: info
+        value: "INFO"
       - key: NUM_PROXIES
         value: "1"
       - key: SECURE_SSL_REDIRECT

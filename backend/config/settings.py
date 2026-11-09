@@ -214,18 +214,22 @@ SIMPLE_JWT = {
 
 # ===== CORS CONFIGURATION =====
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.environ.get(
+    o.strip().rstrip('/')
+    for o in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:3000,http://localhost:5173'
+        'http://localhost:3000,http://localhost:5173',
     ).split(',')
+    if o.strip()
 ]
 
 # ===== CSRF CONFIGURATION =====
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in os.environ.get(
+    o.strip().rstrip('/')
+    for o in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:5173'
+        'http://localhost:5173',
     ).split(',')
+    if o.strip()
 ]
 
 # ===== SECURITY SETTINGS FOR PRODUCTION =====
@@ -265,6 +269,6 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+        'level': os.environ.get('LOG_LEVEL', 'INFO').upper(),
     },
 }

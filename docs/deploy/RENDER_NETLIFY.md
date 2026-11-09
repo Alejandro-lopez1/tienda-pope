@@ -17,7 +17,7 @@
    - `DATABASE_URL=<postgres://...?sslmode=require>` (Neon)
    - `CORS_ALLOWED_ORIGINS=https://<tu-sitio>.netlify.app`
    - `CSRF_TRUSTED_ORIGINS=https://<tu-sitio>.netlify.app`
-   - `LOG_LEVEL=info`
+   - `LOG_LEVEL=INFO`
    - `NUM_PROXIES=1`
    - `SECURE_SSL_REDIRECT=True`
    - (imágenes) `USE_R2_STORAGE=True`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_HOST`
