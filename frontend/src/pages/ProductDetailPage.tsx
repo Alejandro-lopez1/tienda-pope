@@ -7,6 +7,10 @@ export const ProductDetailPage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const { product, loading, error } = useProductDetail(slug || '');
 
+  const placeholder = '/placeholder.svg';
+  const mainImage = product?.image || product?.image_thumbnail || placeholder;
+  const thumbImage = product?.image_thumbnail || product?.image || placeholder;
+
   const handleAddToCart = () => {
     if (!product) return;
 
@@ -24,7 +28,7 @@ export const ProductDetailPage: React.FC = () => {
         id: product.id,
         name: product.name,
         price: product.discounted_price || product.price,
-        image: product.image_thumbnail,
+        image: product.image_thumbnail || product.image || placeholder,
         quantity,
       });
     }
@@ -78,8 +82,9 @@ export const ProductDetailPage: React.FC = () => {
           <div>
             <div className="bg-gray-200 rounded-lg overflow-hidden mb-4 h-96 flex items-center justify-center">
               <img
-                src={product.image}
+                src={mainImage}
                 alt={product.name}
+                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholder; }}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -87,7 +92,7 @@ export const ProductDetailPage: React.FC = () => {
             {/* Thumbnails (si hay múltiples imágenes en el futuro) */}
             <div className="flex gap-2">
               <div className="w-20 h-20 bg-gray-200 rounded cursor-pointer border-2 border-red-500">
-                <img src={product.image_thumbnail} alt="thumb" className="w-full h-full object-cover" />
+                <img src={thumbImage} alt="thumb" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholder; }} className="w-full h-full object-cover" />
               </div>
             </div>
           </div>

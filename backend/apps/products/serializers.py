@@ -8,7 +8,8 @@ class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     discounted_price = serializers.ReadOnlyField()
     in_stock = serializers.ReadOnlyField()
-    
+    image = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = Product
         fields = [

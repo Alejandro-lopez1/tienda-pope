@@ -12,8 +12,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Imagen */}
       <div className="relative h-48 bg-gray-200 overflow-hidden group">
         <img
-          src={product.image_thumbnail || '/placeholder.jpg'}
+          src={product.image_thumbnail || '/placeholder.svg'}
           alt={product.name}
+          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.svg'; }}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
 

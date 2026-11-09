@@ -1,7 +1,10 @@
-from django.test import TestCase
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
+from django.test import TestCase
 from io import BytesIO
+
+from PIL import Image
+from rest_framework.test import APITestCase
 
 from apps.categories.models import Category
 from .models import Product
@@ -46,3 +49,25 @@ class ProductModelTest(TestCase):
 
     def test_product_string_representation(self):
         self.assertEqual(str(self.product), 'Limpiador Multiusos')
+
+
+class ProductAPITests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='SinImagenCat')
+        User = get_user_model()
+        self.staff = User.objects.create_user(username='staffp', password='pass12345', is_staff=True)
+
+    def test_staff_can_create_product_without_image(self):
+        self.client.force_authenticate(user=self.staff)
+        payload = {
+            'name': 'Producto sin imagen',
+            'sku': 'NOIMG-001',
+            'category': self.category.id,
+            'description': 'Creado sin imagen',
+            'price': '199.99',
+            'stock': 3,
+        }
+        res = self.client.post('/api/v1/products/', payload, format='json')
+        self.assertEqual(res.status_code, 201, res.json() if res.content else res.status_code)
+        product = Product.objects.get(sku='NOIMG-001')
+        self.assertFalse(product.image)

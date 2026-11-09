@@ -53,7 +53,9 @@ class Product(models.Model):
     )
     image = models.ImageField(
         upload_to='products/%Y/%m/',
-        help_text="Imagen principal del producto"
+        blank=True,
+        null=True,
+        help_text="Imagen principal del producto (opcional)"
     )
     image_thumbnail = models.ImageField(
         upload_to='products/thumbnails/',

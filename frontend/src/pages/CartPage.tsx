@@ -4,6 +4,7 @@ import { useCart } from '../hooks/useCart';
 
 export const CartPage: React.FC = () => {
   const { items, total, isEmpty, removeFromCart, updateQuantity, clearCart } = useCart();
+  const placeholder = '/placeholder.svg';
 
   if (isEmpty) {
     return (
@@ -41,8 +42,9 @@ export const CartPage: React.FC = () => {
                 >
                   {/* Imagen */}
                   <img
-                    src={item.image}
+                    src={item.image || placeholder}
                     alt={item.name}
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = placeholder; }}
                     className="w-20 h-20 object-cover rounded"
                   />
 
