@@ -71,3 +71,25 @@ class ProductAPITests(APITestCase):
         self.assertEqual(res.status_code, 201, res.json() if res.content else res.status_code)
         product = Product.objects.get(sku='NOIMG-001')
         self.assertFalse(product.image)
+
+    def test_list_products_returns_price_and_rating_as_numbers(self):
+        Product.objects.create(
+            name='Decimal Check',
+            sku='DEC-001',
+            category=self.category,
+            description='Tipos numéricos',
+            price='123.45',
+            stock=2,
+            rating='4.50',
+            is_active=True,
+        )
+        res = self.client.get('/api/v1/products/')
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        results = data.get('results', data)
+        self.assertTrue(results, 'Se esperaba al menos un producto en la lista')
+        item = results[0]
+        self.assertIsInstance(item['price'], (int, float), item['price'])
+        self.assertNotIsInstance(item['price'], bool)
+        self.assertIsInstance(item['rating'], (int, float), item['rating'])
+        self.assertNotIsInstance(item['rating'], bool)

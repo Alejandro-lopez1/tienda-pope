@@ -177,7 +177,7 @@ export default function OrderConfirmationPage() {
 
           <div className="space-y-2 mb-6 pb-6 border-b border-gray-200">
             <div className="flex justify-between text-gray-700"><span>Subtotal:</span><span className="font-semibold">{formatCurrency(order.subtotal)}</span></div>
-            {order.discount_amount > 0 && (
+            {Number(order.discount_amount) > 0 && (
               <div className="flex justify-between text-green-600"><span>Descuento:</span><span className="font-semibold">-{formatCurrency(order.discount_amount)}</span></div>
             )}
             <div className="flex justify-between text-lg font-bold text-gray-900 bg-gradient-to-r from-[#FF4757]/10 to-[#7DC41F]/10 py-2 px-3 rounded">

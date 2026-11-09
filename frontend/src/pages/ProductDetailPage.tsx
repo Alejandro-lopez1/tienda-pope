@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { formatCurrency } from '../services/api';
 import { useProductDetail } from '../hooks/useProducts';
 
 export const ProductDetailPage: React.FC = () => {
@@ -27,7 +28,7 @@ export const ProductDetailPage: React.FC = () => {
       cart.push({
         id: product.id,
         name: product.name,
-        price: product.discounted_price || product.price,
+        price: Number(product.discount_percentage) > 0 ? Number(product.discounted_price) : Number(product.price),
         image: product.image_thumbnail || product.image || placeholder,
         quantity,
       });
@@ -118,31 +119,31 @@ export const ProductDetailPage: React.FC = () => {
             </p>
 
             {/* Rating */}
-            {product.rating > 0 && (
+            {Number(product.rating) > 0 && (
               <div className="flex items-center mb-6">
                 <div className="flex text-yellow-400">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i} className={i < Math.round(product.rating) ? '⭐' : '☆'}>
-                      {i < Math.round(product.rating) ? '⭐' : '☆'}
+                    <span key={i} className={i < Math.round(Number(product.rating)) ? '⭐' : '☆'}>
+                      {i < Math.round(Number(product.rating)) ? '⭐' : '☆'}
                     </span>
                   ))}
                 </div>
                 <span className="ml-2 text-gray-600 text-sm">
-                  {product.rating.toFixed(1)} de 5 ({product.rating_count ?? 0} reseñas)
+                  {Number(product.rating).toFixed(1)} de 5 ({product.rating_count ?? 0} reseñas)
                 </span>
               </div>
             )}
 
             {/* Precios */}
             <div className="mb-6 pb-6 border-b-2 border-gray-200">
-              {product.discount_percentage > 0 ? (
+              {Number(product.discount_percentage) > 0 ? (
                 <div>
                   <div className="flex items-baseline gap-3">
                     <span className="text-4xl font-bold text-gray-900">
-                      ${product.discounted_price.toFixed(2)}
+                      {formatCurrency(product.discounted_price)}
                     </span>
                     <span className="text-xl text-gray-500 line-through">
-                      ${product.price.toFixed(2)}
+                      {formatCurrency(product.price)}
                     </span>
                   </div>
                   <p className="text-red-600 font-semibold mt-2">
@@ -151,7 +152,7 @@ export const ProductDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <span className="text-4xl font-bold text-gray-900">
-                  ${product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </span>
               )}
             </div>

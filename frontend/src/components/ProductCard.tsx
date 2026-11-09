@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ProductListItem } from '../services/api';
+import { formatCurrency, ProductListItem } from '../services/api';
 
 interface ProductCardProps {
   product: ProductListItem;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const rating = Number(product.rating);
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Imagen */}
@@ -53,22 +54,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </Link>
 
         {/* Rating */}
-        {product.rating > 0 && (
+        {rating > 0 && (
           <div className="flex items-center mb-2">
-            <span className="text-yellow-400 text-sm">{'⭐'.repeat(Math.round(product.rating))}</span>
-            <span className="text-gray-500 text-xs ml-2">({product.rating.toFixed(1)})</span>
+            <span className="text-yellow-400 text-sm">{'⭐'.repeat(Math.round(rating))}</span>
+            <span className="text-gray-500 text-xs ml-2">({rating.toFixed(1)})</span>
           </div>
         )}
 
         {/* Precios */}
         <div className="flex items-baseline gap-2 mb-3">
-          {product.discount_percentage > 0 ? (
+          {Number(product.discount_percentage) > 0 ? (
             <>
-              <span className="text-lg font-bold text-gray-900">${product.discounted_price.toFixed(2)}</span>
-              <span className="text-sm text-gray-500 line-through">${product.price.toFixed(2)}</span>
+              <span className="text-lg font-bold text-gray-900">{formatCurrency(product.discounted_price)}</span>
+              <span className="text-sm text-gray-500 line-through">{formatCurrency(product.price)}</span>
             </>
           ) : (
-            <span className="text-lg font-bold text-gray-900">${product.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
           )}
         </div>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { formatCurrency } from '../services/api';
 import { useCart } from '../hooks/useCart';
 
 export const CartPage: React.FC = () => {
@@ -56,7 +57,7 @@ export const CartPage: React.FC = () => {
                     >
                       {item.name}
                     </Link>
-                    <p className="text-gray-600">${item.price.toFixed(2)}</p>
+                    <p className="text-gray-600">{formatCurrency(item.price)}</p>
                   </div>
 
                   {/* Cantidad */}
@@ -85,7 +86,7 @@ export const CartPage: React.FC = () => {
                   {/* Subtotal */}
                   <div className="text-right min-w-[100px]">
                     <p className="font-semibold text-gray-900">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {formatCurrency(Number(item.price) * item.quantity)}
                     </p>
                   </div>
 
@@ -124,12 +125,12 @@ export const CartPage: React.FC = () => {
             <div className="space-y-4 mb-6">
               <div className="flex justify-between text-gray-700">
                 <span>{items.length} producto(s)</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between text-lg font-bold text-gray-900">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -141,7 +142,7 @@ export const CartPage: React.FC = () => {
             </Link>
 
             <button
-              onClick={() => window.location.href = `https://wa.me/543764710683?text=Quiero%20hacer%20un%20pedido%20con%20${items.length}%20productos.%20Total:%20$${total.toFixed(2)}`}
+              onClick={() => window.location.href = `https://wa.me/543764710683?text=${encodeURIComponent(`Quiero hacer un pedido con ${items.length} productos. Total: ${formatCurrency(total)}`)}`}
               className="block w-full mt-3 bg-green-500 text-white py-3 rounded-lg font-bold text-center hover:bg-green-600 transition-colors"
             >
               📱 Ordenar por WhatsApp

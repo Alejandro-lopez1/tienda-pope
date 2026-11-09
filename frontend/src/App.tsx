@@ -14,13 +14,15 @@ import AdminReportsPage from './pages/admin/AdminReportsPage';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { StorefrontLayout } from './components/StorefrontLayout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
   return (
     <AdminAuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
           {/* Customer routes */}
           <Route element={<StorefrontLayout />}>
             <Route path="/" element={<CatalogPage />} />
@@ -57,8 +59,9 @@ function App() {
             path="/admin/reports"
             element={<ProtectedRoute element={<AdminReportsPage />} />}
           />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
     </AdminAuthProvider>
   );
 }
