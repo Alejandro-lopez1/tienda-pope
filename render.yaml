@@ -37,5 +37,7 @@ services:
         sync: false
       - key: R2_PUBLIC_HOST
         sync: false
+      - key: CLOUDINARY_URL
+        sync: false
       - key: PYTHON_VERSION
         value: "3.12.3"

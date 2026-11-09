@@ -4,7 +4,7 @@
 - **Frontend (SPA):** Netlify — `netlify.toml` (base `frontend`, `npm ci && npm run build`, publish `dist`). `VITE_API_URL` se incrusta en build.
 - **Backend (Django/DRF):** Render Web Service (Python). Procfile raíz: `cd backend && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn -c gunicorn_config.py config.wsgi`. `gunicorn_config.py` usa `0.0.0.0:$PORT`.
 - **DB:** PostgreSQL gestionado vía `DATABASE_URL` (Neon recomendado o Render Postgres). **No usar SQLite en Render** (disco efímero → pérdida de datos).
-- **Media:** en Render el disco es efímero; para imágenes hoy usar **R2** (`USE_R2_STORAGE=True` + vars `R2_*`).
+- **Media:** en Render el disco es efímero. Usar **Cloudinary** (recomendado hoy): definir `CLOUDINARY_URL` (SDK Cloudinary); si está presente, tiene prioridad sobre R2. Alternativa: **R2** (`USE_R2_STORAGE=True` + vars `R2_*`). Si no hay storage remoto configurado, se usa FileSystem local (solo dev).
 
 ## 1) Backend (Render)
 1. Crear servicio (conecta repo). **Render no usa `Procfile`** automáticamente; usá `render.yaml` (Blueprint) o configurá en el panel:
@@ -20,9 +20,12 @@
    - `LOG_LEVEL=INFO`
    - `NUM_PROXIES=1`
    - `SECURE_SSL_REDIRECT=True`
-   - (imágenes) `USE_R2_STORAGE=True`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_HOST`
+   - (imágenes, recomendado) `CLOUDINARY_URL`: **cargarla a mano en el dashboard de Render** (Environment). **Nunca commitearla ni guardarla en el repo**. Con `CLOUDINARY_URL` definida, el backend usa Cloudinary (prioridad sobre R2).
+   - (alternativa imágenes) `USE_R2_STORAGE=True`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_HOST`
 3. Deploy y verificar `GET /health/`.
-4. Crear admin: `python manage.py createsuperuser` (shell de Render / one-off job).
+4. Crear admin:
+   - El **plan gratis de Render no ofrece shell/SSH**. Opciones: un *one-off job* temporal si está disponible, correr `manage.py createsuperuser` localmente apuntando a la `DATABASE_URL` de producción (con cuidado), o un comando/migración de datos controlada.
+   - Además del usuario de Django (`createsuperuser`), hace falta crear el **perfil `AdminUser`** (app de auth del proyecto) para que el login del panel admin funcione según el rol/modelo configurado.
 
 ## 2) Frontend (Netlify)
 1. Importar repo; `netlify.toml` define base/build/publish.
