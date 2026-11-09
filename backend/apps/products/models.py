@@ -103,14 +103,20 @@ class Product(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Generar slug automáticamente
+        # Generar slug automáticamente (con sufijo si colisiona)
         if not self.slug:
-            self.slug = slugify(self.name)
-        
+            base_slug = slugify(self.name) or 'producto'
+            slug = base_slug
+            counter = 2
+            while Product.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+
         # Comprimir imagen si es nueva o fue actualizada
         if self.image and (not self.image_thumbnail or self.image.name):
             self._compress_image()
-        
+
         super().save(*args, **kwargs)
 
     def _compress_image(self):

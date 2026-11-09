@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from .models import Product
 from .serializers import ProductSerializer, ProductListSerializer, ProductDetailSerializer
@@ -17,9 +18,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     Endpoints:
     - GET /api/v1/products/ - Listar productos
     - POST /api/v1/products/ - Crear producto (admin)
-    - GET /api/v1/products/{id}/ - Detalle de producto
-    - PATCH /api/v1/products/{id}/ - Actualizar producto (admin)
-    - DELETE /api/v1/products/{id}/ - Eliminar producto (admin)
+    - GET /api/v1/products/{id|slug}/ - Detalle de producto (por id numérico o slug)
+    - PATCH /api/v1/products/{id|slug}/ - Actualizar producto (admin)
+    - DELETE /api/v1/products/{id|slug}/ - Eliminar producto (admin)
     - GET /api/v1/products/search/ - Búsqueda avanzada
     - GET /api/v1/products/featured/ - Productos destacados
     """
@@ -38,6 +39,17 @@ class ProductViewSet(viewsets.ModelViewSet):
         elif self.action == 'retrieve':
             return ProductDetailSerializer
         return ProductSerializer
+
+    def get_object(self):
+        """Resolver por pk numérico o por slug, respetando get_queryset()."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup_value = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        if str(lookup_value).isdigit():
+            obj = get_object_or_404(queryset, pk=lookup_value)
+        else:
+            obj = get_object_or_404(queryset, slug=lookup_value)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def get_queryset(self):
         """

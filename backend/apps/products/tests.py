@@ -50,6 +50,19 @@ class ProductModelTest(TestCase):
     def test_product_string_representation(self):
         self.assertEqual(str(self.product), 'Limpiador Multiusos')
 
+    def test_two_products_same_name_get_distinct_slugs(self):
+        p1 = Product.objects.create(
+            name='Mismo Nombre', sku='SAME-001', category=self.category,
+            description='Uno', price=100, stock=1,
+        )
+        p2 = Product.objects.create(
+            name='Mismo Nombre', sku='SAME-002', category=self.category,
+            description='Dos', price=100, stock=1,
+        )
+        self.assertEqual(p1.slug, 'mismo-nombre')
+        self.assertEqual(p2.slug, 'mismo-nombre-2')
+        self.assertNotEqual(p1.slug, p2.slug)
+
 
 class ProductAPITests(APITestCase):
     def setUp(self):
@@ -93,3 +106,33 @@ class ProductAPITests(APITestCase):
         self.assertNotIsInstance(item['price'], bool)
         self.assertIsInstance(item['rating'], (int, float), item['rating'])
         self.assertNotIsInstance(item['rating'], bool)
+
+    def _make_product(self, **kwargs):
+        defaults = dict(
+            name='Detalle', sku='DET-001', category=self.category,
+            description='Desc', price='50.00', stock=5, is_active=True,
+        )
+        defaults.update(kwargs)
+        return Product.objects.create(**defaults)
+
+    def test_get_product_by_slug_returns_200(self):
+        p = self._make_product(name='Por Slug', sku='SLUG-001')
+        res = self.client.get(f'/api/v1/products/{p.slug}/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['id'], p.id)
+
+    def test_get_product_by_id_returns_200(self):
+        p = self._make_product(name='Por Id', sku='ID-001')
+        res = self.client.get(f'/api/v1/products/{p.id}/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['slug'], p.slug)
+
+    def test_get_nonexistent_slug_returns_404(self):
+        res = self.client.get('/api/v1/products/no-existe-este-slug/')
+        self.assertEqual(res.status_code, 404)
+
+    def test_get_inactive_product_by_slug_as_anonymous_returns_404(self):
+        p = self._make_product(name='Inactivo', sku='INACT-001', is_active=False)
+        self.client.logout()
+        res = self.client.get(f'/api/v1/products/{p.slug}/')
+        self.assertEqual(res.status_code, 404)
