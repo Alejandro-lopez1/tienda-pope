@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'apps.auth',
+    'apps.settings',
     'apps.categories',
     'apps.products',
     'apps.orders',
