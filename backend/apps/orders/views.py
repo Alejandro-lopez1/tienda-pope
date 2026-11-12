@@ -113,13 +113,23 @@ class OrderViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        """Eliminar pedido (solo admin)."""
+        """Eliminar pedido (solo admin, solo si está cancelado)."""
         if not request.user or not request.user.is_staff:
             return Response(
                 {'error': 'Solo administradores pueden eliminar pedidos'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        return super().destroy(request, *args, **kwargs)
+        
+        order = self.get_object()
+        if order.status != 'cancelled':
+            return Response(
+                {'error': 'Solo se pueden eliminar pedidos cancelados. Cancelá el pedido primero.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Pedido cancelado: ya repuso stock, solo eliminar
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'])
     def pending(self, request):

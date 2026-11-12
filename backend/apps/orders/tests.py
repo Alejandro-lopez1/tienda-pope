@@ -513,3 +513,173 @@ class SendWhatsAppEndpointTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertIn('error', response.data)
         self.assertIn('No hay número de WhatsApp', response.data['error'])
+
+
+class OrderDestroyTests(APITestCase):
+    """Tests para el endpoint DELETE (destroy) de pedidos."""
+    
+    def setUp(self):
+        """Setup para tests."""
+        self.category = Category.objects.create(name='Test')
+        self.product = Product.objects.create(
+            name='Test Product',
+            sku='TEST-001',
+            category=self.category,
+            description='Test',
+            price=Decimal('100.00'),
+            stock=10,
+        )
+        User = get_user_model()
+        self.admin_user = User.objects.create_user(
+            username='admin',
+            password='pass12345',
+            is_staff=True
+        )
+        self.regular_user = User.objects.create_user(
+            username='user',
+            password='pass12345',
+            is_staff=False
+        )
+    
+    def test_destroy_cancelled_order_returns_204_and_deletes(self):
+        """DELETE pedido cancelado retorna 204 y elimina el pedido + items."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='cancelled'
+        )
+        item = OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            quantity=1,
+            price=Decimal('100.00')
+        )
+        
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.filter(id=order.id).exists())
+        self.assertFalse(OrderItem.objects.filter(id=item.id).exists())
+    
+    def test_destroy_pending_order_returns_400(self):
+        """DELETE pedido pending retorna 400 sin eliminar."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='pending'
+        )
+        
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Solo se pueden eliminar pedidos cancelados', response.json()['error'])
+        self.assertTrue(Order.objects.filter(id=order.id).exists())
+    
+    def test_destroy_confirmed_order_returns_400(self):
+        """DELETE pedido confirmed retorna 400 sin eliminar."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='confirmed'
+        )
+        
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(Order.objects.filter(id=order.id).exists())
+    
+    def test_destroy_delivered_order_returns_400(self):
+        """DELETE pedido entregado retorna 400 sin eliminar."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='delivered'
+        )
+        
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(Order.objects.filter(id=order.id).exists())
+    
+    def test_destroy_non_admin_returns_403(self):
+        """DELETE sin ser admin retorna 403."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='cancelled'
+        )
+        
+        self.client.force_authenticate(user=self.regular_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Order.objects.filter(id=order.id).exists())
+    
+    def test_destroy_anonymous_returns_401_or_403(self):
+        """DELETE sin autenticar retorna 401 o 403."""
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='cancelled'
+        )
+        
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        # 401 unauthenticated o 403 unauthorized, ambos válidos
+        self.assertIn(response.status_code, (401, 403))
+        self.assertTrue(Order.objects.filter(id=order.id).exists())
+    
+    def test_destroy_cancelled_does_not_affect_stock(self):
+        """DELETE pedido cancelado NO toca stock (ya fue repuesto al cancelar)."""
+        initial_stock = self.product.stock
+        
+        order = Order.objects.create(
+            customer_name='Test',
+            customer_phone='1234567890',
+            customer_address='Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+            status='cancelled'
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            quantity=2,
+            price=Decimal('50.00')
+        )
+        
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.delete(f'/api/v1/orders/{order.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock, initial_stock)
