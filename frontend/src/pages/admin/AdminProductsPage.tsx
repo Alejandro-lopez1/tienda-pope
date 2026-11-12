@@ -67,6 +67,7 @@ export default function AdminProductsPage() {
   const [imageError, setImageError] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -121,6 +122,7 @@ export default function AdminProductsPage() {
       const id = created?.id ?? list.find((c) => c.name === name)?.id;
       if (id) setForm((prev) => ({ ...prev, category: String(id) }));
       setNewCategoryName('');
+      setShowCategoryForm(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al crear categoría');
     } finally {
@@ -437,12 +439,56 @@ export default function AdminProductsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Categoría *</label>
-                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500">
-                    <option value="">{categoriesLoading ? 'Cargando categorías...' : 'Seleccionar...'}</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500">
+                      <option value="">{categoriesLoading ? 'Cargando categorías...' : 'Seleccionar...'}</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryForm(!showCategoryForm)}
+                      disabled={categoriesLoading}
+                      className="px-3 py-2 bg-slate-600 hover:bg-slate-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                    >
+                      + Nueva
+                    </button>
+                  </div>
+                  {showCategoryForm && (
+                    <div className="mt-2 p-2 bg-amber-900/30 border border-amber-700 rounded space-y-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Nombre (ej: Limpieza)"
+                        className="w-full px-2 py-1 bg-slate-700 border border-slate-600 text-white rounded focus:outline-none focus:border-blue-500 text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCreateCategory();
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCreateCategory}
+                          disabled={creatingCategory || !newCategoryName.trim()}
+                          className="flex-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium text-sm"
+                        >
+                          {creatingCategory ? '...' : 'Crear'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCategoryForm(false);
+                            setNewCategoryName('');
+                          }}
+                          className="flex-1 px-3 py-1 bg-slate-600 hover:bg-slate-500 text-white rounded font-medium text-sm"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {!categoriesLoading && categories.length === 0 && (
                     <div className="mt-2 p-2 bg-amber-900/30 border border-amber-700 rounded text-xs text-amber-200">
                       No hay categorías. Creá una para continuar:
