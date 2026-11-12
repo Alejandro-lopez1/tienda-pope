@@ -210,6 +210,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         try:
             order = self.get_object()
             whatsapp_data = WhatsAppMessageGenerator.generate_for_order(order)
+            
+            # Si no hay número de WhatsApp configurado, devolver error
+            if not whatsapp_data.get('phone_number'):
+                return Response(
+                    {'error': 'No hay número de WhatsApp configurado para la tienda. Contacta con el administrador.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            
             return Response(whatsapp_data, status=status.HTTP_200_OK)
         except NotFound:
             raise

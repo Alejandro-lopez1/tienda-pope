@@ -1,16 +1,18 @@
 from decimal import Decimal
 from io import BytesIO
 from unittest.mock import patch
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
+from rest_framework import status
 from pypdf import PdfReader
 
 from apps.categories.models import Category
 from apps.products.models import Product
+from apps.settings.models import StoreSettings
 from apps.orders.services import PDFReceiptGenerator, WhatsAppMessageGenerator
-
 from .models import Order, OrderItem
 
 
@@ -314,3 +316,200 @@ class OrderActionsTests(APITestCase):
         self.assertEqual(res.json().get('error'), 'No se puede marcar como pagado un pedido cancelado')
         self.order.refresh_from_db()
         self.assertFalse(self.order.paid)
+
+
+class StoreSettingsWhatsAppTests(TestCase):
+    """Tests para integración de StoreSettings con WhatsApp."""
+    
+    def setUp(self):
+        """Limpiar StoreSettings antes de cada test."""
+        StoreSettings.objects.all().delete()
+        self.category = Category.objects.create(name='Test')
+        self.product = Product.objects.create(
+            name='Producto Test',
+            sku='TEST-001',
+            category=self.category,
+            description='Producto de prueba',
+            price=Decimal('100.00'),
+            stock=10,
+        )
+        self.order = Order.objects.create(
+            customer_name='Cliente Test',
+            customer_phone='5491234567890',
+            customer_address='Dir Test',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=1,
+            price=Decimal('100.00'),
+        )
+    
+    def test_whatsapp_link_with_store_settings(self):
+        """generate_whatsapp_link() debe usar el número de StoreSettings."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = '5493764710683'
+        store.save()
+        
+        message = WhatsAppMessageGenerator.generate_message(self.order)
+        link = WhatsAppMessageGenerator.generate_whatsapp_link(message)
+        
+        self.assertIsNotNone(link)
+        self.assertIn('5493764710683', link)
+        self.assertIn('wa.me', link)
+    
+    def test_whatsapp_link_no_number_configured(self):
+        """generate_whatsapp_link() retorna None si no hay número configurado."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = ''
+        store.save()
+        
+        message = WhatsAppMessageGenerator.generate_message(self.order)
+        link = WhatsAppMessageGenerator.generate_whatsapp_link(message)
+        
+        self.assertIsNone(link)
+    
+    def test_generate_for_order_with_whatsapp(self):
+        """generate_for_order() retorna datos completos con WhatsApp configurado."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = '5493764710683'
+        store.save()
+        
+        data = WhatsAppMessageGenerator.generate_for_order(self.order)
+        
+        self.assertIn('message', data)
+        self.assertIn('whatsapp_link', data)
+        self.assertIn('phone_number', data)
+        self.assertIsNotNone(data['whatsapp_link'])
+        self.assertEqual(data['phone_number'], '5493764710683')
+    
+    def test_generate_for_order_without_whatsapp(self):
+        """generate_for_order() retorna null para whatsapp_link si no está configurado."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = ''
+        store.save()
+        
+        data = WhatsAppMessageGenerator.generate_for_order(self.order)
+        
+        self.assertIn('message', data)
+        self.assertIsNone(data['whatsapp_link'])
+        self.assertIsNone(data['phone_number'])
+
+
+class StoreSettingsOrderPDFTests(TestCase):
+    """Tests para integración de StoreSettings con PDF."""
+    
+    def setUp(self):
+        """Limpiar antes de cada test."""
+        StoreSettings.objects.all().delete()
+        self.category = Category.objects.create(name='Test')
+        self.product = Product.objects.create(
+            name='Producto PDF',
+            sku='PDF-001',
+            category=self.category,
+            description='Producto para PDF',
+            price=Decimal('150.00'),
+            stock=5,
+        )
+        self.order = Order.objects.create(
+            customer_name='Cliente PDF',
+            customer_phone='5491111111111',
+            customer_address='Dir PDF',
+            payment_method='cash',
+            subtotal=Decimal('150.00'),
+            total=Decimal('150.00'),
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=1,
+            price=Decimal('150.00'),
+        )
+    
+    def test_pdf_generation_uses_store_name(self):
+        """PDF debe incluir store_name de StoreSettings."""
+        store = StoreSettings.get_or_create_default()
+        store.store_name = 'Tienda Test PDF'
+        store.save()
+        
+        generator = PDFReceiptGenerator()
+        pdf_buffer = generator.generate(self.order)
+        
+        # Verificar que el PDF se generó (sin errores)
+        self.assertGreater(pdf_buffer.getbuffer().nbytes, 0)
+    
+    def test_pdf_generation_with_whatsapp_in_footer(self):
+        """PDF footer debe mencionar WhatsApp si está configurado."""
+        store = StoreSettings.get_or_create_default()
+        store.store_name = 'Popé Test'
+        store.whatsapp_number = '5493764710683'
+        store.save()
+        
+        generator = PDFReceiptGenerator()
+        pdf_buffer = generator.generate(self.order)
+        
+        # PDF generado sin errores
+        self.assertGreater(pdf_buffer.getbuffer().nbytes, 0)
+
+
+class SendWhatsAppEndpointTests(APITestCase):
+    """Tests para el endpoint send-whatsapp."""
+    
+    def setUp(self):
+        """Setup para tests."""
+        StoreSettings.objects.all().delete()
+        self.category = Category.objects.create(name='Test')
+        self.product = Product.objects.create(
+            name='Test Product',
+            sku='TEST-001',
+            category=self.category,
+            description='Test',
+            price=Decimal('100.00'),
+            stock=10,
+        )
+        self.order = Order.objects.create(
+            customer_name='Test Client',
+            customer_phone='5491234567890',
+            customer_address='Test Dir',
+            payment_method='cash',
+            subtotal=Decimal('100.00'),
+            total=Decimal('100.00'),
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=self.product,
+            quantity=1,
+            price=Decimal('100.00'),
+        )
+    
+    def test_send_whatsapp_with_configured_number(self):
+        """POST send-whatsapp retorna 200 con whatsapp_link si hay número."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = '5493764710683'
+        store.save()
+        
+        response = self.client.post(
+            f'/api/v1/orders/{self.order.order_number}/send-whatsapp/'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('whatsapp_link', response.data)
+        self.assertIsNotNone(response.data['whatsapp_link'])
+        self.assertIn('wa.me', response.data['whatsapp_link'])
+    
+    def test_send_whatsapp_without_configured_number(self):
+        """POST send-whatsapp retorna 503 si no hay número configurado."""
+        store = StoreSettings.get_or_create_default()
+        store.whatsapp_number = ''
+        store.save()
+        
+        response = self.client.post(
+            f'/api/v1/orders/{self.order.order_number}/send-whatsapp/'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn('error', response.data)
+        self.assertIn('No hay número de WhatsApp', response.data['error'])

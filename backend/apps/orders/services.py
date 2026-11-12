@@ -13,8 +13,12 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from django.utils.html import escape
+from django.http import JsonResponse
+from rest_framework.response import Response
+from rest_framework import status
 
 from .models import Order
+from apps.settings.models import StoreSettings
 
 
 class PDFReceiptGenerator:
@@ -99,7 +103,8 @@ class PDFReceiptGenerator:
         )
         
         # 1. Encabezado - Nombre de la tienda
-        elements.append(Paragraph("POPÉ", title_style))
+        store_settings = StoreSettings.get_or_create_default()
+        elements.append(Paragraph(store_settings.store_name, title_style))
         elements.append(Paragraph("Productos de Limpieza", normal_style))
         elements.append(Spacer(1, 0.2 * inch))
         
@@ -204,8 +209,16 @@ class PDFReceiptGenerator:
         elements.append(Spacer(1, 0.2 * inch))
         
         # 7. Notas o pie de página
+        footer_text = "Gracias por tu compra"
+        if store_settings.whatsapp_number:
+            footer_text += " en {store_name}. Para consultas, contacta por WhatsApp.".format(
+                store_name=store_settings.store_name
+            )
+        else:
+            footer_text += f" en {store_settings.store_name}."
+        
         elements.append(Paragraph(
-            "<i>Gracias por tu compra en Popé. Para consultas, contacta por WhatsApp.</i>",
+            f"<i>{footer_text}</i>",
             ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER, textColor=colors.grey)
         ))
         
@@ -214,9 +227,6 @@ class PDFReceiptGenerator:
 
 class WhatsAppMessageGenerator:
     """Generador de mensajes y enlaces de WhatsApp para pedidos."""
-    
-    # Número de WhatsApp de Popé (sin +, sólo dígitos)
-    WHATSAPP_NUMBER = "541647710683"  # +54 9 376 471-0683
     
     @staticmethod
     def generate_message(order: Order) -> str:
@@ -259,17 +269,24 @@ Gracias 🙏
         return message
     
     @staticmethod
-    def generate_whatsapp_link(message: str, phone_number: str = WHATSAPP_NUMBER) -> str:
+    def generate_whatsapp_link(message: str, phone_number: str = None) -> str:
         """
         Genera un enlace wa.me con el mensaje codificado.
         
         Args:
             message: Texto del mensaje
-            phone_number: Número de WhatsApp (formato: 541647710683)
+            phone_number: Número de WhatsApp (formato: 541647710683). Si es None, obtiene de StoreSettings.
             
         Returns:
-            str: URL de WhatsApp
+            str: URL de WhatsApp, o None si no hay número configurado
         """
+        if phone_number is None:
+            store_settings = StoreSettings.get_or_create_default()
+            phone_number = store_settings.whatsapp_number
+        
+        if not phone_number:
+            return None  # Retornar None si no hay número configurado
+        
         from urllib.parse import quote
         
         # Codificar el mensaje para URL
@@ -291,15 +308,16 @@ Gracias 🙏
         Returns:
             dict: {
                 'message': str (mensaje),
-                'whatsapp_link': str (enlace wa.me),
-                'phone_number': str (número de Popé)
+                'whatsapp_link': str (enlace wa.me) o None,
+                'phone_number': str (número de Popé) o None
             }
         """
+        store_settings = StoreSettings.get_or_create_default()
         message = cls.generate_message(order)
-        link = cls.generate_whatsapp_link(message)
+        link = cls.generate_whatsapp_link(message, store_settings.whatsapp_number)
         
         return {
             'message': message,
             'whatsapp_link': link,
-            'phone_number': cls.WHATSAPP_NUMBER,
+            'phone_number': store_settings.whatsapp_number or None,
         }
