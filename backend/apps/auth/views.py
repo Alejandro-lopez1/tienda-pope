@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User
 
 from .models import AdminUser
+from .permissions import IsAdminUser
 from .serializers import (
     CustomTokenObtainPairSerializer,
     AdminUserSerializer,
@@ -50,7 +51,7 @@ class AdminUserViewSet(viewsets.ModelViewSet):
     
     queryset = AdminUser.objects.all()
     serializer_class = AdminUserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get_queryset(self):
         """Filtrar solo administradores activos."""
