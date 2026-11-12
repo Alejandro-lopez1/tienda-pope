@@ -2,9 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../services/api';
 import { useCart } from '../hooks/useCart';
+import { useStoreSettings } from '../hooks/useStoreSettings';
 
 export const CartPage: React.FC = () => {
   const { items, total, isEmpty, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { settings } = useStoreSettings();
   const placeholder = '/placeholder.svg';
 
   if (isEmpty) {
@@ -141,12 +143,22 @@ export const CartPage: React.FC = () => {
               Ir a Checkout
             </Link>
 
-            <button
-              onClick={() => window.location.href = `https://wa.me/543764710683?text=${encodeURIComponent(`Quiero hacer un pedido con ${items.length} productos. Total: ${formatCurrency(total)}`)}`}
-              className="block w-full bg-green-500 text-white py-3 rounded-lg font-bold text-center hover:bg-green-600 transition-colors"
-            >
-              📱 Ordenar por WhatsApp
-            </button>
+            {settings.whatsapp_number ? (
+              <button
+                onClick={() => window.location.href = `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(`Quiero hacer un pedido con ${items.length} productos. Total: ${formatCurrency(total)}`)}`}
+                className="block w-full bg-green-500 text-white py-3 rounded-lg font-bold text-center hover:bg-green-600 transition-colors"
+              >
+                📱 Ordenar por WhatsApp
+              </button>
+            ) : (
+              <button
+                disabled
+                className="block w-full bg-gray-400 text-gray-200 py-3 rounded-lg font-bold text-center cursor-not-allowed"
+                title="WhatsApp no está configurado por la tienda"
+              >
+                📱 WhatsApp no disponible
+              </button>
+            )}
           </div>
         </div>
       </div>

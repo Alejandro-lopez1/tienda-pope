@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
+import { useStoreSettings } from '../hooks/useStoreSettings';
 
 export const StorefrontLayout: React.FC = () => {
   const { itemCount } = useCart();
+  const { settings } = useStoreSettings();
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
@@ -55,13 +57,34 @@ export const StorefrontLayout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <img src="/logo_pope.jpg" alt="" className="h-7 w-7 rounded-full object-cover" />
-            <span className="font-semibold text-gray-800">Popé</span>
+            <span className="font-semibold text-gray-800">{settings.store_name}</span>
             <span className="text-gray-400">·</span>
             <span>Productos de limpieza</span>
           </div>
+          
+          {/* Información de contacto/ubicación desde StoreSettings */}
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-0">
-            <span className="text-gray-500">Posadas · Garupá · Candelaria</span>
-            <span className="hidden sm:inline text-gray-400 mx-2">·</span>
+            {settings.address && (
+              <>
+                <span className="text-gray-500">{settings.address}</span>
+                <span className="hidden sm:inline text-gray-400 mx-2">·</span>
+              </>
+            )}
+            
+            {settings.phone && (
+              <>
+                <span className="text-gray-500">{settings.phone}</span>
+                <span className="hidden sm:inline text-gray-400 mx-2">·</span>
+              </>
+            )}
+            
+            {settings.delivery_zones && (
+              <>
+                <span className="text-gray-500 text-xs">Entregas disponibles</span>
+                <span className="hidden sm:inline text-gray-400 mx-2">·</span>
+              </>
+            )}
+            
             <Link to="/admin/login" className="text-primary-600 hover:text-primary-700 font-medium">
               Admin
             </Link>

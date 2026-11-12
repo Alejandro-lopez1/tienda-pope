@@ -1,6 +1,7 @@
 import getpass
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from apps.auth.models import AdminUser
 
 User = get_user_model()
@@ -51,22 +52,24 @@ class Command(BaseCommand):
             raise CommandError('❌ Las contraseñas no coinciden.')
         
         try:
-            # Crear usuario
-            user = User.objects.create_user(
-                username=email,  # Usar email como username
-                email=email,
-                first_name=first_name,
-                password=password,
-                is_staff=True,  # Permitir acceso al admin
-                is_active=True,
-            )
-            
-            # Crear perfil AdminUser
-            admin_user = AdminUser.objects.create(
-                user=user,
-                role='admin',  # Rol admin
-                is_active=True,
-            )
+            # Crear usuario y perfil AdminUser en transacción atómica
+            with transaction.atomic():
+                # Crear usuario
+                user = User.objects.create_user(
+                    username=email,  # Usar email como username
+                    email=email,
+                    first_name=first_name,
+                    password=password,
+                    is_staff=True,  # Permitir acceso al admin
+                    is_active=True,
+                )
+                
+                # Crear perfil AdminUser
+                admin_user = AdminUser.objects.create(
+                    user=user,
+                    role='admin',  # Rol admin
+                    is_active=True,
+                )
             
             self.stdout.write(
                 self.style.SUCCESS(
