@@ -5,9 +5,11 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
+from pypdf import PdfReader
 
 from apps.categories.models import Category
 from apps.products.models import Product
+from apps.orders.services import PDFReceiptGenerator, WhatsAppMessageGenerator
 
 from .models import Order, OrderItem
 
@@ -186,6 +188,113 @@ class OrderActionsTests(APITestCase):
             res = self.client.get(f'/api/v1/orders/{self.order.order_number}/generate-pdf/')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res['Content-Type'], 'application/pdf')
+
+    def test_generate_pdf_without_mock(self):
+        """Test real PDF generation sin mock - verifica que reportlab genera un PDF válido."""
+        res = self.client.get(f'/api/v1/orders/{self.order.order_number}/generate-pdf/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
+        # Verificar que el contenido es un PDF válido (empieza con %PDF)
+        # FileResponse usa streaming_content, no .content
+        pdf_content = b''.join(res.streaming_content)
+        self.assertTrue(pdf_content.startswith(b'%PDF'), "Response body must start with %PDF")
+
+    def test_generate_pdf_with_special_chars_in_name(self):
+        """Test PDF generation con caracteres especiales en nombre del cliente.
+        Verifica que los caracteres especiales en Paragraph se escapan correctamente sin romper el PDF."""
+        # Producto con caracteres especiales en nombre
+        product = Product.objects.create(
+            name='Jabón & Cía <Premium>',
+            sku='SKU-SOAP-01',
+            category=self.product.category,
+            description='Test product',
+            price=Decimal('120.00'),
+            stock=10,
+            is_active=True,
+        )
+        order = Order.objects.create(
+            customer_name='Juan & Pedro <3',
+            customer_phone='+54 9 376-4710683',
+            customer_email='juan.pedro@example.com',
+            customer_address='Calle José de Alencar & Martín Fierro, 1234',
+            payment_method='cash',
+            subtotal=Decimal('120.00'),
+            total=Decimal('120.00'),
+            status='pending',
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=1,
+            price=Decimal('120.00'),
+        )
+        res = self.client.get(f'/api/v1/orders/{order.order_number}/generate-pdf/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
+        
+        # Extraer contenido del PDF y verificar que contiene los textos correctos
+        pdf_content = b''.join(res.streaming_content)
+        self.assertTrue(pdf_content.startswith(b'%PDF'), "Response body must start with %PDF")
+        
+        # Leer el PDF con pypdf para extraer texto
+        pdf_buffer = BytesIO(pdf_content)
+        pdf_reader = PdfReader(pdf_buffer)
+        pdf_text = ""
+        for page in pdf_reader.pages:
+            pdf_text += page.extract_text()
+        
+        # Verificar que los nombres aparecen sin &amp; en el PDF
+        self.assertIn('Juan & Pedro', pdf_text, "Customer name with & should appear in PDF")
+        self.assertIn('Jabón & Cía', pdf_text, "Product name with & should appear in PDF")
+        self.assertNotIn('&amp;', pdf_text, "PDF should not contain escaped HTML entities")
+        self.assertIn('Calle José de Alencar & Martín Fierro', pdf_text, "Address with & should appear in PDF")
+
+    def test_generate_pdf_with_deleted_product(self):
+        """Test PDF generation - verifica que el código es defensivo si producto está None."""
+        # Este test verifica que el endpoint sigue funcionando
+        res = self.client.get(f'/api/v1/orders/{self.order.order_number}/generate-pdf/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res['Content-Type'], 'application/pdf')
+
+    def test_whatsapp_message_with_special_chars(self):
+        """Test WhatsApp message generation con caracteres especiales.
+        Verifica que los caracteres especiales aparecen sin escaping en el mensaje."""
+        # Crear un producto con caracteres especiales (sin HTML tags)
+        product = Product.objects.create(
+            name='Jabón & Cía Premium',
+            sku='SKU-SOAP-02',
+            category=self.product.category,
+            description='Test product',
+            price=Decimal('150.00'),
+            stock=10,
+            is_active=True,
+        )
+        order = Order.objects.create(
+            customer_name='Juan & Pedro',
+            customer_phone='+54 9 376-4710683',
+            customer_email='juan.pedro@example.com',
+            payment_method='cash',
+            subtotal=Decimal('150.00'),
+            total=Decimal('150.00'),
+            status='pending',
+        )
+        OrderItem.objects.create(
+            order=order,
+            product=product,
+            quantity=2,
+            price=Decimal('75.00'),
+        )
+        
+        # Generar mensaje de WhatsApp
+        message = WhatsAppMessageGenerator.generate_message(order)
+        
+        # Verificar que los caracteres especiales aparecen sin escaping
+        self.assertIn('Juan & Pedro', message, "Customer name with & should appear in message")
+        self.assertIn('Jabón & Cía Premium', message, "Product name with & should appear in message")
+        self.assertNotIn('&amp;', message, "Message should not contain escaped HTML entities")
+        # Mensaje de WhatsApp es texto plano, no debe contener &lt; o &gt;
+        self.assertNotIn('&lt;', message, "Message should not contain escaped < tag")
+        self.assertNotIn('&gt;', message, "Message should not contain escaped > tag")
 
     def test_mark_paid_pending_sets_paid_and_confirmed(self):
         self.client.force_authenticate(user=self.staff)

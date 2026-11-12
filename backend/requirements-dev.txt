@@ -1,0 +1,5 @@
+# Development and testing dependencies
+-r requirements.txt
+
+# PDF testing utilities
+pypdf==4.1.1

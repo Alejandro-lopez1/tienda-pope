@@ -12,6 +12,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from django.utils.html import escape
 
 from .models import Order
 
@@ -125,13 +126,13 @@ class PDFReceiptGenerator:
         # 4. Información del cliente
         elements.append(Paragraph("INFORMACIÓN DEL CLIENTE", heading_style))
         customer_info = [
-            f"<b>Nombre:</b> {order.customer_name}",
-            f"<b>Teléfono:</b> {order.customer_phone}",
+            f"<b>Nombre:</b> {escape(order.customer_name)}",
+            f"<b>Teléfono:</b> {escape(order.customer_phone)}",
         ]
         if order.customer_email:
-            customer_info.append(f"<b>Email:</b> {order.customer_email}")
+            customer_info.append(f"<b>Email:</b> {escape(order.customer_email)}")
         if order.customer_address:
-            customer_info.append(f"<b>Dirección:</b> {order.customer_address}")
+            customer_info.append(f"<b>Dirección:</b> {escape(order.customer_address)}")
         
         for info in customer_info:
             elements.append(Paragraph(info, normal_style))
@@ -146,8 +147,9 @@ class PDFReceiptGenerator:
         ]
         
         for item in order.items.all():
+            product_name = item.product.name[:30] if item.product else "[Producto eliminado]"
             items_data.append([
-                item.product.name[:30],  # Limitar longitud del nombre
+                product_name,
                 str(item.quantity),
                 f"${item.price:.2f}",
                 f"${item.subtotal:.2f}",
@@ -158,8 +160,8 @@ class PDFReceiptGenerator:
         items_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.COLOR_SECONDARY),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), TA_CENTER),
-            ('ALIGN', (0, 0), (0, -1), TA_LEFT),  # Producto alineado a izquierda
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Producto alineado a izquierda
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
@@ -185,8 +187,8 @@ class PDFReceiptGenerator:
         
         summary_table = Table(summary_data, colWidths=[4*inch, 2*inch])
         summary_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), TA_RIGHT),
-            ('ALIGN', (1, 0), (1, -1), TA_RIGHT),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
             ('FONTNAME', (0, 0), (-1, -2), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -2), 10),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
@@ -228,7 +230,7 @@ class WhatsAppMessageGenerator:
             str: Mensaje formateado
         """
         items_summary = "\n".join([
-            f"• {item.product.name} x{item.quantity} - ${item.subtotal:.2f}"
+            f"• {item.product.name if item.product else '[Producto eliminado]'} x{item.quantity} - ${item.subtotal:.2f}"
             for item in order.items.all()
         ])
         
