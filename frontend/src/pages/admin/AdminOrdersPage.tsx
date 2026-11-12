@@ -188,6 +188,25 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleDeleteOrder = async (orderId: number, orderNumber: string) => {
+    const ok = window.confirm(
+      `¿Eliminar pedido ${orderNumber}? Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+    try {
+      setActionLoading(true);
+      setModalError(null);
+      const response = await apiFetch(`/orders/${orderId}/`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(await readError(response, 'Error al eliminar pedido'));
+      handleCloseModal();
+      fetchOrders();
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Error al eliminar pedido');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const whatsappPhone = String(selectedOrder?.customer_phone ?? '').replace(/\D/g, '');
 
   return (
@@ -431,20 +450,35 @@ export default function AdminOrdersPage() {
 
                   <div className="border-t border-gray-200 pt-4">
                     <p className="text-sm text-gray-600 mb-3">Acciones</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDownloadPDF(selectedOrder.id)}
-                        className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded transition"
-                      >
-                        📄 Descargar PDF
-                      </button>
-                      <button
-                        onClick={() => window.open(`https://wa.me/${whatsappPhone}`, '_blank')}
-                        disabled={!whatsappPhone}
-                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-semibold rounded transition"
-                      >
-                        💬 WhatsApp
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDownloadPDF(selectedOrder.id)}
+                          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded transition min-h-11"
+                        >
+                          📄 Descargar PDF
+                        </button>
+                        <button
+                          onClick={() => window.open(`https://wa.me/${whatsappPhone}`, '_blank')}
+                          disabled={!whatsappPhone}
+                          className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-semibold rounded transition min-h-11"
+                        >
+                          💬 WhatsApp
+                        </button>
+                      </div>
+                      {selectedOrder.status === 'cancelled' ? (
+                        <button
+                          onClick={() => handleDeleteOrder(selectedOrder.id, selectedOrder.order_number)}
+                          disabled={actionLoading}
+                          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded transition min-h-11"
+                        >
+                          🗑️ Eliminar Pedido
+                        </button>
+                      ) : (
+                        <p className="text-xs text-gray-500 px-2 py-1 bg-gray-50 rounded text-center">
+                          Cancelá el pedido para poder eliminarlo
+                        </p>
+                      )}
                     </div>
                   </div>
                 </>
