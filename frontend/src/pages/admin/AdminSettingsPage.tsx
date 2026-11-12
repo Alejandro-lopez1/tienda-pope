@@ -91,8 +91,8 @@ export default function AdminSettingsPage() {
 
   const StoreTab = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Nombre de la Tienda
           </label>
@@ -104,7 +104,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Email de la Tienda
           </label>
@@ -117,8 +117,8 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Teléfono
           </label>
@@ -130,7 +130,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             WhatsApp
           </label>
@@ -155,8 +155,8 @@ export default function AdminSettingsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Ciudad
           </label>
@@ -168,7 +168,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Provincia
           </label>
@@ -180,7 +180,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Código Postal
           </label>
@@ -235,8 +235,8 @@ export default function AdminSettingsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Impuesto (%)
           </label>
@@ -250,7 +250,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Moneda
           </label>
@@ -270,8 +270,8 @@ export default function AdminSettingsPage() {
 
   const AppearanceTab = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Nombre/Logo
           </label>
@@ -283,7 +283,7 @@ export default function AdminSettingsPage() {
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Idioma
           </label>
@@ -299,8 +299,8 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Color Primario
           </label>
@@ -320,7 +320,7 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Color Secundario
           </label>
@@ -345,8 +345,8 @@ export default function AdminSettingsPage() {
 
   const SystemTab = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Zona Horaria
           </label>
@@ -362,7 +362,7 @@ export default function AdminSettingsPage() {
           </select>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="block text-sm font-medium text-slate-300 mb-2">
             Versión de API
           </label>
@@ -401,7 +401,7 @@ export default function AdminSettingsPage() {
       <div className="max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Configuración de la Tienda</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Configuración de la Tienda</h2>
           <button
             onClick={handleSaveSettings}
             disabled={loading}
