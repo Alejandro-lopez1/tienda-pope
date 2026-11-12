@@ -7,6 +7,7 @@ import { apiService, Category } from '../services/api';
 export const CatalogPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [filters, setFilters] = useState({
     category_id: undefined as number | undefined,
     min_price: undefined as number | undefined,
@@ -64,34 +65,47 @@ export const CatalogPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Catálogo de Productos</h1>
-          <p className="text-gray-600">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">Catálogo de Productos</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Descubre nuestros productos de limpieza de calidad premium
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2">
             Mostrando {products.length} de {total} productos
           </p>
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Sidebar de Filtros - solo visible en desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
+          {/* Sidebar de Filtros - colapsable en móvil */}
           <div className="md:col-span-1">
-            <ProductFilters
-              categories={categories}
-              onFilterChange={handleFilterChange}
-              onSearchChange={handleSearchChange}
-            />
+            <div className="md:hidden mb-4">
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                {showMobileFilters ? '✕ Cerrar Filtros' : '⚙️ Filtros'}
+              </button>
+            </div>
+            {(showMobileFilters || window.innerWidth >= 768) && (
+              <ProductFilters
+                categories={categories}
+                onFilterChange={handleFilterChange}
+                onSearchChange={handleSearchChange}
+              />
+            )}
           </div>
 
           {/* Grid de Productos */}
           <div className="md:col-span-3">
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-sm">
                 {error}
               </div>
             )}
@@ -104,25 +118,25 @@ export const CatalogPage: React.FC = () => {
 
             {!loading && products.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No se encontraron productos</p>
+                <p className="text-gray-500 text-base">No se encontraron productos</p>
               </div>
             )}
 
             {!loading && products.length > 0 && (
               <>
                 {/* Grid responsivo */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-8">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
 
                 {/* Paginación */}
-                <div className="flex justify-between items-center mt-8 pt-8 border-t border-gray-200">
+                <div className="flex justify-between items-center mt-8 pt-8 border-t border-gray-200 gap-2 sm:gap-4">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={!hasPrevious}
-                    className={`px-4 py-2 rounded font-semibold transition-colors ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded font-semibold transition-colors text-sm sm:text-base ${
                       hasPrevious
                         ? 'bg-red-500 text-white hover:bg-red-600'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -131,14 +145,14 @@ export const CatalogPage: React.FC = () => {
                     ← Anterior
                   </button>
 
-                  <span className="text-gray-600 font-semibold">
+                  <span className="text-gray-600 font-semibold text-sm">
                     Página {currentPage}
                   </span>
 
                   <button
                     onClick={() => setCurrentPage((p) => p + 1)}
                     disabled={!hasNext}
-                    className={`px-4 py-2 rounded font-semibold transition-colors ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded font-semibold transition-colors text-sm sm:text-base ${
                       hasNext
                         ? 'bg-red-500 text-white hover:bg-red-600'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'

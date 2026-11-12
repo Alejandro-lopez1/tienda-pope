@@ -9,9 +9,9 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const rating = Number(product.rating);
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       {/* Imagen */}
-      <div className="relative h-48 bg-gray-200 overflow-hidden group">
+      <div className="relative aspect-square bg-gray-200 overflow-hidden group flex-shrink-0">
         <img
           src={product.image_thumbnail || '/placeholder.svg'}
           alt={product.name}
@@ -21,14 +21,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Badge de descuento */}
         {product.discount_percentage > 0 && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+          <div className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold">
             -{product.discount_percentage}%
           </div>
         )}
 
         {/* Badge de destacado */}
         {product.is_featured && (
-          <div className="absolute top-2 left-2 bg-yellow-400 text-white px-2 py-1 rounded text-xs font-bold">
+          <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-yellow-400 text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[10px] sm:text-xs font-bold">
             ⭐ Destacado
           </div>
         )}
@@ -36,47 +36,47 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Badge de stock */}
         {!product.in_stock && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">Agotado</span>
+            <span className="text-white font-bold text-sm sm:text-lg">Agotado</span>
           </div>
         )}
       </div>
 
       {/* Contenido */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
         {/* Categoría */}
-        <p className="text-xs text-gray-500 uppercase font-semibold mb-2">{product.category_name}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 uppercase font-semibold mb-1 sm:mb-2">{product.category_name}</p>
 
         {/* Nombre */}
         <Link to={`/producto/${product.slug}`}>
-          <h3 className="text-sm font-semibold text-gray-800 hover:text-red-600 line-clamp-2 mb-2">
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-red-600 line-clamp-2 mb-1 sm:mb-2 capitalize">
             {product.name}
           </h3>
         </Link>
 
         {/* Rating */}
         {rating > 0 && (
-          <div className="flex items-center mb-2">
-            <span className="text-yellow-400 text-sm">{'⭐'.repeat(Math.round(rating))}</span>
-            <span className="text-gray-500 text-xs ml-2">({rating.toFixed(1)})</span>
+          <div className="flex items-center mb-1 sm:mb-2">
+            <span className="text-yellow-400 text-xs sm:text-sm">{'⭐'.repeat(Math.round(rating))}</span>
+            <span className="text-gray-500 text-[10px] sm:text-xs ml-1">({rating.toFixed(1)})</span>
           </div>
         )}
 
         {/* Precios */}
-        <div className="flex items-baseline gap-2 mb-3">
+        <div className="flex items-baseline gap-1 sm:gap-2 mb-2 sm:mb-3">
           {Number(product.discount_percentage) > 0 ? (
             <>
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(product.discounted_price)}</span>
-              <span className="text-sm text-gray-500 line-through">{formatCurrency(product.price)}</span>
+              <span className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(product.discounted_price)}</span>
+              <span className="text-xs sm:text-sm text-gray-500 line-through">{formatCurrency(product.price)}</span>
             </>
           ) : (
-            <span className="text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
+            <span className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(product.price)}</span>
           )}
         </div>
 
         {/* Botón */}
         <Link
           to={`/producto/${product.slug}`}
-          className={`block w-full py-2 px-4 rounded font-semibold text-center text-white transition-colors ${
+          className={`w-full py-2 px-2 sm:px-4 rounded font-semibold text-center text-white text-xs sm:text-sm transition-colors mt-auto ${
             product.in_stock
               ? 'bg-red-500 hover:bg-red-600'
               : 'bg-gray-400 cursor-not-allowed'
