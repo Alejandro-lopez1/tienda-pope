@@ -154,7 +154,6 @@ export default function AdminCustomersPage() {
     <AdminLayout title="Gestión de Clientes">
       <div className="space-y-6">
         <div className="flex justify-between items-center gap-3 flex-wrap">
-          <h2 className="text-2xl font-bold text-white">Clientes</h2>
           <div className="flex gap-2">
             <button
               onClick={() => handleExport('xlsx')}

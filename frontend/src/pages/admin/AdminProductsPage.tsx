@@ -303,8 +303,7 @@ export default function AdminProductsPage() {
   return (
     <AdminLayout title="Gestión de Productos">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Productos</h2>
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <button onClick={() => handleOpenForm()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
             + Nuevo Producto
           </button>
