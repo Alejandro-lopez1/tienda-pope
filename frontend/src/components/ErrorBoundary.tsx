@@ -22,14 +22,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-            <h1 className="text-xl font-bold text-gray-900 mb-2">Algo salió mal, recargá la página</h1>
-            <p className="text-gray-600 mb-6">Ocurrió un error inesperado al mostrar esta pantalla.</p>
+        <div className="min-h-dvh flex items-center justify-center bg-gray-50 px-3">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">
+            <h1 className="text-base sm:text-xl font-bold text-gray-900 mb-2">Algo salió mal</h1>
+            <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">Ocurrió un error inesperado al mostrar esta pantalla.</p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded"
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded text-sm"
             >
               Recargar
             </button>

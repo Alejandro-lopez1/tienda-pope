@@ -26,7 +26,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-dvh bg-gray-100">
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#2C3E50] text-white transition-transform duration-200 transform ${
@@ -81,26 +81,26 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-dvh">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between px-6 py-4">
+        <header className="bg-white shadow-sm border-b border-gray-200 h-14 sm:h-16">
+          <div className="flex items-center justify-between px-4 sm:px-6 h-full">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition"
               >
-                <span className="text-2xl">☰</span>
+                <span className="text-xl">☰</span>
               </button>
-              <h2 className="text-xl font-bold text-gray-900">{title || 'Dashboard'}</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title || 'Dashboard'}</h2>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">{user?.first_name || user?.username}</p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF4757] to-[#7DC41F] flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF4757] to-[#7DC41F] flex items-center justify-center text-white font-bold flex-shrink-0">
                 {user?.first_name?.[0] || 'A'}
               </div>
             </div>
@@ -108,8 +108,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => 
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6">
             {children}
           </div>
         </main>

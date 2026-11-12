@@ -15,10 +15,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
+      <div className="min-h-dvh flex items-center justify-center bg-gray-100">
+        <div className="text-center px-4">
           <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-[#FF4757] rounded-full"></div>
-          <p className="mt-4 text-gray-600">Cargando...</p>
+          <p className="mt-4 text-gray-600 text-sm">Cargando...</p>
         </div>
       </div>
     );
@@ -30,10 +30,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requiredRole && user?.role !== requiredRole && user?.role !== 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-dvh flex items-center justify-center bg-gray-100 px-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Acceso Denegado</h1>
-          <p className="text-gray-600">No tienes permiso para acceder a esta página.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Acceso Denegado</h1>
+          <p className="text-sm sm:text-base text-gray-600">No tienes permiso para acceder a esta página.</p>
         </div>
       </div>
     );

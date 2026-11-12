@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FF4757] via-[#2C3E50] to-[#7DC41F] flex items-center justify-center px-4">
+    <div className="min-h-dvh bg-gradient-to-br from-[#FF4757] via-[#2C3E50] to-[#7DC41F] flex items-center justify-center px-3 py-4">
       {/* Fondo decorativo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-48 -mt-48"></div>
@@ -57,26 +57,26 @@ export default function AdminLoginPage() {
 
       {/* Contenedor de login */}
       <div className="relative w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-2xl p-8">
+        <div className="bg-white rounded-lg shadow-2xl p-4 sm:p-8">
           {/* Logo/Título */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-[#FF4757] mb-2">POPÉ</h1>
-            <p className="text-gray-600">Panel de Administración</p>
+          <div className="text-center mb-4 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#FF4757] mb-1 sm:mb-2">POPÉ</h1>
+            <p className="text-xs sm:text-base text-gray-600">Panel de Administración</p>
           </div>
 
           {/* Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex gap-2">
-                <span className="text-xl">⚠️</span>
-                <span className="text-sm">{error}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 sm:px-4 sm:py-3 rounded-lg flex gap-2 text-xs sm:text-sm">
+                <span className="text-lg flex-shrink-0">⚠️</span>
+                <span>{error}</span>
               </div>
             )}
 
             {/* Email/Username */}
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="email" className="block text-xs sm:text-sm font-semibold text-gray-900 mb-1 sm:mb-2">
                 Email o Usuario
               </label>
               <input
@@ -86,14 +86,14 @@ export default function AdminLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@pope.com"
                 disabled={loading}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF4757] focus:ring-2 focus:ring-[#FF4757]/20 transition disabled:bg-gray-100"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF4757] focus:ring-2 focus:ring-[#FF4757]/20 transition disabled:bg-gray-100 text-sm min-h-11"
                 required
               />
             </div>
 
             {/* Contraseña */}
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-900 mb-2">
+              <label htmlFor="password" className="block text-xs sm:text-sm font-semibold text-gray-900 mb-1 sm:mb-2">
                 Contraseña
               </label>
               <input
@@ -103,7 +103,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={loading}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF4757] focus:ring-2 focus:ring-[#FF4757]/20 transition disabled:bg-gray-100"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF4757] focus:ring-2 focus:ring-[#FF4757]/20 transition disabled:bg-gray-100 text-sm min-h-11"
                 required
               />
             </div>
@@ -118,7 +118,7 @@ export default function AdminLoginPage() {
                 disabled={loading}
                 className="w-4 h-4 rounded border-gray-300 text-[#FF4757] cursor-pointer"
               />
-              <label htmlFor="remember" className="text-sm text-gray-700 cursor-pointer">
+              <label htmlFor="remember" className="text-xs sm:text-sm text-gray-700 cursor-pointer">
                 Recordar este email
               </label>
             </div>
@@ -127,7 +127,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full bg-gradient-to-r from-[#FF4757] to-[#ff6b7a] hover:from-[#ff3a45] hover:to-[#ff5b6a] disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-[#FF4757] to-[#ff6b7a] hover:from-[#ff3a45] hover:to-[#ff5b6a] disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-sm min-h-11"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
           </form>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
+          <div className="mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 text-center text-[10px] sm:text-xs text-gray-500">
             <p>Panel de Administración Popé</p>
             <p>© 2026 Todos los derechos reservados</p>
           </div>
@@ -149,8 +149,8 @@ export default function AdminLoginPage() {
 
         {/* Info de prueba (solo desarrollo) */}
         {import.meta.env.DEV && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-            <p className="font-semibold mb-2">🧪 Credenciales de prueba:</p>
+          <div className="mt-3 sm:mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
+            <p className="font-semibold mb-1">🧪 Credenciales de prueba:</p>
             <p>Email: admin@pope.com</p>
             <p>Contraseña: admin123</p>
           </div>
