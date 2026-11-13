@@ -68,6 +68,7 @@ export default function AdminProductsPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [loadingProductDetail, setLoadingProductDetail] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -153,32 +154,48 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleOpenForm = (product?: Product) => {
+  const handleOpenForm = async (product?: Product) => {
     setImageError(null);
     setImageFile(null);
     if (product) {
       setSelectedProduct(product);
-      const cat = typeof product.category === 'object' ? product.category?.id : product.category;
-      setForm({
-        name: product.name || '',
-        sku: product.sku || '',
-        price: String(product.price ?? ''),
-        discount_percentage: String(product.discount_percentage ?? '0'),
-        stock: String(product.stock ?? '0'),
-        category: cat != null ? String(cat) : '',
-        description: product.description || '',
-        is_active: !!product.is_active,
-        is_featured: !!product.is_featured,
-      });
-      setPreview(product.image || null);
       setIsEditing(true);
+      setLoadingProductDetail(true);
+      setShowModal(true);
+      try {
+        // GET detalle completo para editar (incluye sku, description, is_active, category como objeto)
+        const response = await apiFetch(`/products/${product.id}/`);
+        if (!response.ok) throw new Error('Error al cargar detalle del producto');
+        const detail: Product = await response.json();
+        
+        const cat = typeof detail.category === 'object' ? detail.category?.id : detail.category;
+        setForm({
+          name: detail.name || '',
+          sku: detail.sku || '',
+          price: String(detail.price ?? ''),
+          discount_percentage: String(detail.discount_percentage ?? '0'),
+          stock: String(detail.stock ?? '0'),
+          category: cat != null ? String(cat) : '',
+          description: detail.description || '',
+          is_active: !!detail.is_active,
+          is_featured: !!detail.is_featured,
+        });
+        setPreview(detail.image || null);
+        setSelectedProduct(detail);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Error al cargar producto');
+        setShowModal(false);
+        setIsEditing(false);
+      } finally {
+        setLoadingProductDetail(false);
+      }
     } else {
       setSelectedProduct(null);
       setForm(emptyForm());
       setPreview(null);
       setIsEditing(false);
+      setShowModal(true);
     }
-    setShowModal(true);
   };
 
   const handleCloseModal = () => {
@@ -416,7 +433,14 @@ export default function AdminProductsPage() {
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-white text-2xl">✕</button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {loadingProductDetail ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <p className="mt-3 text-slate-400">Cargando detalle del producto...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Nombre *</label>
                   <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500" />
@@ -540,6 +564,8 @@ export default function AdminProductsPage() {
                   Cancelar
                 </button>
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>
