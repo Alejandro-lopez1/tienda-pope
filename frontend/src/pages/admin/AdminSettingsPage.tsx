@@ -12,6 +12,131 @@ interface StoreSettings {
   delivery_zones?: string;
 }
 
+// Funciones de render (no componentes, evita remount)
+const renderStoreTab = (settings: StoreSettings, handleInputChange: (field: keyof StoreSettings, value: string) => void) => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="min-w-0">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Nombre de la Tienda
+        </label>
+        <input
+          type="text"
+          value={settings.store_name || ''}
+          onChange={(e) => handleInputChange('store_name', e.target.value)}
+          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+        />
+      </div>
+
+      <div className="min-w-0">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Email (opcional)
+        </label>
+        <input
+          type="email"
+          value={settings.email || ''}
+          onChange={(e) => handleInputChange('email', e.target.value)}
+          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+        />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="min-w-0">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Teléfono (opcional)
+        </label>
+        <input
+          type="tel"
+          value={settings.phone || ''}
+          onChange={(e) => handleInputChange('phone', e.target.value)}
+          placeholder="Ej: +54 9 3764 71-0683"
+          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+        />
+      </div>
+
+      <div className="min-w-0">
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          WhatsApp (solo dígitos, int'l)
+        </label>
+        <input
+          type="tel"
+          value={settings.whatsapp_number || ''}
+          onChange={(e) => handleInputChange('whatsapp_number', e.target.value)}
+          placeholder="Ej: 5493764710683"
+          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+        />
+        <p className="text-xs text-slate-400 mt-1">Usado en recibos PDF y enlaces wa.me</p>
+      </div>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-slate-300 mb-2">
+        Dirección (mostrada en pie de página)
+      </label>
+      <input
+        type="text"
+        value={settings.address || ''}
+        onChange={(e) => handleInputChange('address', e.target.value)}
+        placeholder="Ej: Av. Principal 123, Oberá"
+        className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-slate-300 mb-2">
+        Zonas de Entrega (mostradas en carrito)
+      </label>
+      <textarea
+        value={settings.delivery_zones || ''}
+        onChange={(e) => handleInputChange('delivery_zones', e.target.value)}
+        placeholder="Ej: Zona 1: Oberá\nZona 2: Alrededores\nZona 3: Interior"
+        rows={4}
+        className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+      />
+    </div>
+  </div>
+);
+
+const renderContactTab = () => (
+  <div className="space-y-6">
+    <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+      <p className="text-sm text-slate-300">
+        <strong>ℹ️ Información:</strong> Los datos que ingreses aquí se usarán en:
+      </p>
+      <ul className="text-sm text-slate-400 mt-2 list-disc list-inside">
+        <li>Recibos PDF (store_name, whatsapp_number)</li>
+        <li>Pie de página del catálogo (store_name, address)</li>
+        <li>Botón WhatsApp de carrito (whatsapp_number)</li>
+        <li>Información de zonas de entrega (delivery_zones)</li>
+      </ul>
+    </div>
+  </div>
+);
+
+const renderSystemTab = (user: any) => (
+  <div className="space-y-4">
+    <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+      <h4 className="font-semibold text-white mb-2">Información del Sistema</h4>
+      <div className="space-y-2 text-sm text-slate-400">
+        <p>
+          <span className="text-slate-300">Admin Conectado:</span> {user?.full_name || user?.email}
+        </p>
+        <p>
+          <span className="text-slate-300">Email:</span> {user?.email}
+        </p>
+        <p>
+          <span className="text-slate-300">Versión Popé:</span> v0.9.0
+        </p>
+        <p>
+          <span className="text-slate-300">Última Sincronización:</span>{' '}
+          {new Date().toLocaleString('es-AR')}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
 export default function AdminSettingsPage() {
   const { user } = useAdminAuth();
   const [settings, setSettings] = useState<StoreSettings>({});
@@ -73,130 +198,6 @@ export default function AdminSettingsPage() {
   const handleInputChange = (field: keyof StoreSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
-
-  const StoreTab = () => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="min-w-0">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Nombre de la Tienda
-          </label>
-          <input
-            type="text"
-            value={settings.store_name || ''}
-            onChange={(e) => handleInputChange('store_name', e.target.value)}
-            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-          />
-        </div>
-
-        <div className="min-w-0">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Email (opcional)
-          </label>
-          <input
-            type="email"
-            value={settings.email || ''}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="min-w-0">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Teléfono (opcional)
-          </label>
-          <input
-            type="tel"
-            value={settings.phone || ''}
-            onChange={(e) => handleInputChange('phone', e.target.value)}
-            placeholder="Ej: +54 9 3764 71-0683"
-            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-          />
-        </div>
-
-        <div className="min-w-0">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            WhatsApp (solo dígitos, int'l)
-          </label>
-          <input
-            type="tel"
-            value={settings.whatsapp_number || ''}
-            onChange={(e) => handleInputChange('whatsapp_number', e.target.value)}
-            placeholder="Ej: 5493764710683"
-            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-          />
-          <p className="text-xs text-slate-400 mt-1">Usado en recibos PDF y enlaces wa.me</p>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Dirección (mostrada en pie de página)
-        </label>
-        <input
-          type="text"
-          value={settings.address || ''}
-          onChange={(e) => handleInputChange('address', e.target.value)}
-          placeholder="Ej: Av. Principal 123, Oberá"
-          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Zonas de Entrega (mostradas en carrito)
-        </label>
-        <textarea
-          value={settings.delivery_zones || ''}
-          onChange={(e) => handleInputChange('delivery_zones', e.target.value)}
-          placeholder="Ej: Zona 1: Oberá\nZona 2: Alrededores\nZona 3: Interior"
-          rows={4}
-          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
-        />
-      </div>
-    </div>
-  );
-
-  const ContactTab = () => (
-    <div className="space-y-6">
-      <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
-        <p className="text-sm text-slate-300">
-          <strong>ℹ️ Información:</strong> Los datos que ingreses aquí se usarán en:
-        </p>
-        <ul className="text-sm text-slate-400 mt-2 list-disc list-inside">
-          <li>Recibos PDF (store_name, whatsapp_number)</li>
-          <li>Pie de página del catálogo (store_name, address)</li>
-          <li>Botón WhatsApp de carrito (whatsapp_number)</li>
-          <li>Información de zonas de entrega (delivery_zones)</li>
-        </ul>
-      </div>
-    </div>
-  );
-
-  const SystemTab = () => (
-    <div className="space-y-4">
-      <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
-        <h4 className="font-semibold text-white mb-2">Información del Sistema</h4>
-        <div className="space-y-2 text-sm text-slate-400">
-          <p>
-            <span className="text-slate-300">Admin Conectado:</span> {user?.full_name || user?.email}
-          </p>
-          <p>
-            <span className="text-slate-300">Email:</span> {user?.email}
-          </p>
-          <p>
-            <span className="text-slate-300">Versión Popé:</span> v0.9.0
-          </p>
-          <p>
-            <span className="text-slate-300">Última Sincronización:</span>{' '}
-            {new Date().toLocaleString('es-AR')}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -261,9 +262,9 @@ export default function AdminSettingsPage() {
 
         {/* Tab Content */}
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          {activeTab === 'store' && <StoreTab />}
-          {activeTab === 'contact' && <ContactTab />}
-          {activeTab === 'system' && <SystemTab />}
+          {activeTab === 'store' && renderStoreTab(settings, handleInputChange)}
+          {activeTab === 'contact' && renderContactTab()}
+          {activeTab === 'system' && renderSystemTab(user)}
         </div>
 
         {/* Save Button (Footer) */}
